@@ -1,73 +1,176 @@
 import asyncio
 import pandas as pd
-# from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright
 
-async def scrape_card_data(card_name, set_name, number_in_set):
+async def search_card(page, card_name, set_name):
+    query = f"{card_name} {set_name}"
+    await page.goto("https://www.tcgplayer.com", wait_until="domcontentloaded")
+
+    # Wait for the search input
+    await page.wait_for_selector("input#autocomplete-input")
+
+    # Type query
+    await page.fill("input#autocomplete-input", query)
+    await page.keyboard.press("Enter")
+
+    # Wait for product cards to appear
+    await page.wait_for_selector("section.product-card__product")
+
+    # Get all cards, click the first one
+    cards = await page.query_selector_all("section.product-card__product")
+    if cards:
+        await cards[0].click()
+        await page.wait_for_timeout(3000)  # give it time to load product page
+    else:
+        print(f"No results found for {query}")
+
+async def scrape_card_data(page, card_name, set_name, number_in_set, image_url):
+    condition_list = ['Damaged', 'Heavily Played', 'Moderately Played', 'Lightly Played', 'Near Mint']
     results = []
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True, slow_mo=50)
-        page = await browser.new_page()
+    # --- Buscar carta ---
+    await search_card(page, card_name, set_name)
+    await page.reload()
 
-        # 1. Ir a tcgplayer
-        await page.goto("https://www.tcgplayer.com")
+    await page.wait_for_timeout(3000)
 
-        # 2. Buscar carta
-        search_query = f"{card_name} {set_name}"
-        await page.fill("input[placeholder='Search']", search_query)
-        await page.keyboard.press("Enter")
-        await page.wait_for_timeout(3000)
+    # --- Abrir Printing popover ---
+    await page.wait_for_selector("button[data-testid='filterBar-Printing']")
+    await page.click("button[data-testid='filterBar-Printing']")
+    await page.wait_for_selector("div[data-testid='searchFilterPrinting']")
 
-        # 3. Seleccionar primer resultado
-        await page.click("a.search-result__title")  # <-- puede necesitar refinamiento
-        await page.wait_for_timeout(3000)
+    # --- Extraer opciones de Printing ---
+    printing_checkboxes = await page.query_selector_all(
+        "div[data-testid='searchFilterPrinting'] input.tcg-input-checkbox__input"
+    )
+    printing_options = {}
+    for checkbox in printing_checkboxes:
+        id_attr = await checkbox.get_attribute("id")
+        label_text_el = await checkbox.evaluate_handle(
+            "el => el.closest('label').querySelector('.tcg-input-checkbox__label-text')"
+        )
+        label_text = await label_text_el.inner_text() if label_text_el else id_attr
+        printing_options[label_text] = id_attr
 
-        # 4. Iterar sobre printings
-        printing_options = await page.query_selector_all("div.product__printing button")
-        for i in range(len(printing_options)):
-            await printing_options[i].click()
-            await page.wait_for_timeout(2000)
+    # --- Abrir Condition popover ---
+    await page.wait_for_selector("button[data-testid='filterBar-Condition']")
+    await page.click("button[data-testid='filterBar-Condition']")
+    await page.wait_for_selector("div[data-testid='searchFilterCondition']")
 
-            printing_name = await printing_options[i].inner_text()
+    # --- Extraer opciones de Condition ---
+    condition_checkboxes = await page.query_selector_all(
+        "div[data-testid='searchFilterCondition'] input.tcg-input-checkbox__input"
+    )
+    condition_options = {}
+    for checkbox in condition_checkboxes:
+        id_attr = await checkbox.get_attribute("id")
+        label_text_el = await checkbox.evaluate_handle(
+            "el => el.closest('label').querySelector('.tcg-input-checkbox__label-text')"
+        )
+        label_text = await label_text_el.inner_text() if label_text_el else id_attr
+        condition_options[label_text] = id_attr
 
-            # 5. Iterar sobre condiciones
-            condition_rows = await page.query_selector_all("div.product-details__condition-row")
-            for row in condition_rows:
-                condition = await row.query_selector("span.condition-label")
-                price = await row.query_selector("span.market-price")
+    # --- Iterar Printing × Condition ---
+    for print_label, print_id in printing_options.items():
+        for cond_label in condition_list:
+            
+            await page.click("button#clearFilters")
+            await page.wait_for_timeout(200)
 
-                if condition and price:
-                    results.append({
-                        "CardName": card_name,
-                        "SetName": set_name,
-                        "NumberInSet": number_in_set,
-                        "PrintingOption": printing_name.strip(),
-                        "Condition": (await condition.inner_text()).strip(),
-                        "MarketPrice": (await price.inner_text()).strip()
-                    })
+            # Idioma fijo en inglés
+            await page.click("button[data-testid='filterBar-Language']")
+            await page.click("label[for='hfb-Language-English-filter']")
 
-        await browser.close()
+            # Seleccionar impresión
+            await page.click("button[data-testid='filterBar-Printing']")
+            await page.click(f"label[for='hfb-{print_id}']")
+
+            price_value = None
+
+            # Seleccionar condición solo si existe
+            if cond_label in condition_options:
+                cond_id = condition_options[cond_label]
+                await page.click("button[data-testid='filterBar-Condition']")
+                await page.click(f"label[for='hfb-{cond_id}']")
+
+                try:
+                    await page.wait_for_selector("td .price-points__upper__price", timeout=5000)
+                    price_text = await page.inner_text("td .price-points__upper__price")
+                    price_value = float(price_text.replace("$", "").replace(",", ""))
+                except:
+                    price_value = None  # si no hay precio
+
+            # --- Guardar resultado como una fila ---
+            results.append({
+                "card_name": card_name,
+                "set_name": set_name,
+                "number_in_set": number_in_set,
+                "printing_option": print_label,
+                "condition": cond_label,
+                "market_price": price_value,
+                "image": image_url
+            })
 
     return results
 
+async def scrape_from_excel(file_path, page, headless=True):
+    df = pd.read_excel(file_path)
+    all_data = []
+
+    for _, row in df.iterrows():
+        card_name = row["Nombre"]
+        set_name = row["Set"]
+        number_in_set = row["Número"]
+        image_url = row.get("Imagen", None)
+
+        try:
+            data = await scrape_card_data(
+                page=page,
+                card_name=card_name,
+                set_name=set_name,
+                number_in_set=number_in_set,
+                image_url=image_url
+            )
+            all_data.extend(data)
+
+        except Exception as e:
+            print(f"Error scraping {card_name} ({set_name}): {e}")
+            # Generar fila con valores nulos para esta carta
+            condition_list = ['Damaged', 'Heavily Played', 'Moderately Played', 'Lightly Played', 'Near Mint']
+            for cond in condition_list:
+                all_data.append({
+                    "card_name": card_name,
+                    "set_name": set_name,
+                    "number_in_set": number_in_set,
+                    "printing_option": None,
+                    "condition": cond,
+                    "market_price": None,
+                    "image": image_url
+                })
+
+    result_df = pd.DataFrame(all_data)
+    result_df.to_csv("card_information_en.csv", index=False)
+
+    return result_df
 
 async def main():
-    # Leer Excel
-    df = pd.read_excel("pokemon_cards.xlsx")
+    # Iniciar Playwright y navegador
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=False, slow_mo=0)
+        page = await browser.new_page()
 
-    all_data = []
-    for _, row in df.iterrows():
-        card_name = row["CardName"]
-        set_name = row["SetName"]
-        number_in_set = row["NumberInSet"]
+        # Path a tu Excel
+        excel_path = "/Users/philip/Desktop/Lettuce/Browser-auto/Cotiza-inador/PokeScrape/lista_cartas.xlsx"
 
-        data = await scrape_card_data(card_name, set_name, number_in_set)
-        all_data.extend(data)
+        # Llamada a la función que hace el scraping
+        df_results = await scrape_from_excel(excel_path, page)
 
-    # Guardar en CSV
-    out_df = pd.DataFrame(all_data)
-    out_df.to_csv("pokemon_prices.csv", index=False)
+        # Mostrar resultados
+        print(df_results)
 
+        # Cerrar navegador
+        await browser.close()
 
+# Ejecutar el main
 if __name__ == "__main__":
     asyncio.run(main())
