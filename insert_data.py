@@ -50,10 +50,10 @@ def insert_price(cur, card_id, condition_id, price):
     """, (card_id, condition_id, price, datetime.now()))
 
 # Procesar CSV e insertar en BD
-with conn.cursor() as cur, open("card_information.csv", newline='', encoding="utf-8") as csvfile:
+with conn.cursor() as cur, open("card_information_en.csv", newline='', encoding="utf-8") as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
-        name = row["card_name"]   # tu CSV usa "ard_name" en vez de "card_name"
+        name = row["card_name"]   
         set_name = row["set_name"]
         number_in_set = row["number_in_set"]
         printing_option = row["printing_option"]
