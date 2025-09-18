@@ -1,4 +1,4 @@
-
+-- Drop tables if they already exist
 DROP TABLE IF EXISTS card_in_collection;
 DROP TABLE IF EXISTS collection;
 DROP TABLE IF EXISTS price;
@@ -6,67 +6,81 @@ DROP TABLE IF EXISTS card_condition;
 DROP TABLE IF EXISTS card;
 DROP TABLE IF EXISTS "user";
 
+-- Users table
 CREATE TABLE "user" (
-  "user_id" integer PRIMARY KEY,
-  "name" varchar,
-  "email" varchar UNIQUE,
-  "created_at" timestamp
+    "user_id" SERIAL PRIMARY KEY,
+    "name" VARCHAR,
+    "email" VARCHAR UNIQUE,
+    "created_at" TIMESTAMP
 );
 
+-- Cards table
 CREATE TABLE "card" (
-  "card_id" integer PRIMARY KEY,
-  "name" varchar,
-  "language" varchar,
-  "set_name" varchar,
-  "set_number" varchar,
-  "finish_type" varchar,
-  "image_url" varchar,
-  "edition" varchar
+    "card_id" SERIAL PRIMARY KEY,
+    "name" VARCHAR,
+    "language" VARCHAR,
+    "set_name" VARCHAR,
+    "set_number" VARCHAR,
+    "image_url" VARCHAR,
+    "edition" VARCHAR,
+    CONSTRAINT card_unique UNIQUE (name, language, set_name, set_number, edition)
 );
 
-CREATE TABLE "card_condition" (
-  "condition_id" integer PRIMARY KEY,
-  "description" varchar
+-- Card conditions table
+CREATE TABLE card_condition (
+    condition_id SERIAL PRIMARY KEY,
+    description VARCHAR UNIQUE
 );
 
+-- Prices table
 CREATE TABLE "price" (
-  "card_id" integer,
-  "condition_id" integer,
-  "price_usd" decimal NOT NULL,]]
-  
-  "date" timestamp,
-  PRIMARY KEY ("card_id", "condition_id")
+    "card_id" INTEGER,
+    "condition_id" INTEGER,
+    "price_usd" DECIMAL NOT NULL,
+    "date" TIMESTAMP,
+    PRIMARY KEY ("card_id", "condition_id")
 );
 
-CREATE TABLE "collection" (
-  "collection_id" integer PRIMARY KEY,
-  "title" varchar,
-  "user_id" integer NOT NULL,
-  "exchange_rate" decimal,
-  "collection_price_usd" decimal,
-  "created_at" timestamp
+-- Collections table
+CREATE TABLE collection (
+    "collection_id" SERIAL PRIMARY KEY,
+    "title" VARCHAR,
+    "user_id" INTEGER NOT NULL,
+    "exchange_rate" DECIMAL,
+    "collection_price_usd" DECIMAL,
+    "created_at" TIMESTAMP
 );
 
-CREATE TABLE "card_in_collection" (
-  "card_collection_id" integer PRIMARY KEY,
-  "collection_id" integer NOT NULL,
-  "card_id" integer NOT NULL,
-  "condition_id" integer NOT NULL,
-  "quantity" integer
+-- Cards in collections table
+CREATE TABLE card_in_collection (
+    "card_collection_id" SERIAL PRIMARY KEY,
+    "collection_id" INTEGER NOT NULL,
+    "card_id" INTEGER NOT NULL,
+    "condition_id" INTEGER NOT NULL,
+    "quantity" INTEGER
 );
 
+-- Comments
 COMMENT ON COLUMN "card"."language" IS 'EN or JP';
-COMMENT ON COLUMN "card"."set_name" IS 'e.g: Legend of Blue Eyes White Dragon';
-COMMENT ON COLUMN "card"."set_number" IS 'e.g: LOB-001';
-COMMENT ON COLUMN "card"."finish_type" IS 'Normal, Holofoil, Reverse Holofoil';
+COMMENT ON COLUMN "card"."set_name" IS 'e.g., Legend of Blue Eyes White Dragon';
+COMMENT ON COLUMN "card"."set_number" IS 'e.g., LOB-001';
 COMMENT ON COLUMN "card"."image_url" IS 'link to official image';
 COMMENT ON COLUMN "card_condition"."description" IS 'Example: Near Mint, Lightly Played';
 COMMENT ON COLUMN "collection"."exchange_rate" IS 'Negotiable per collection';
-COMMENT ON COLUMN "collection"."collection_price_usd" IS 'CALCULATED VALUE FROM SUM OF INDIVIDUAL CARDS';
+COMMENT ON COLUMN "collection"."collection_price_usd" IS 'Calculated from sum of individual cards';
 
-ALTER TABLE "collection" ADD FOREIGN KEY ("user_id") REFERENCES "user" ("user_id");
-ALTER TABLE "card_in_collection" ADD FOREIGN KEY ("collection_id") REFERENCES "collection" ("collection_id");
-ALTER TABLE "price" ADD FOREIGN KEY ("card_id") REFERENCES "card" ("card_id");
-ALTER TABLE "price" ADD FOREIGN KEY ("condition_id") REFERENCES "card_condition" ("condition_id");
+-- Foreign keys
+ALTER TABLE collection 
+    ADD FOREIGN KEY (user_id) REFERENCES "user" (user_id);
 
-ALTER TABLE "card_in_collection" ADD FOREIGN KEY ("card_id", "condition_id") REFERENCES "price" ("card_id", "condition_id");
+ALTER TABLE card_in_collection 
+    ADD FOREIGN KEY (collection_id) REFERENCES collection (collection_id);
+
+ALTER TABLE price 
+    ADD FOREIGN KEY (card_id) REFERENCES card (card_id);
+
+ALTER TABLE price 
+    ADD FOREIGN KEY (condition_id) REFERENCES card_condition (condition_id);
+
+ALTER TABLE card_in_collection 
+    ADD FOREIGN KEY (card_id, condition_id) REFERENCES price (card_id, condition_id);
