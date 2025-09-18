@@ -32,7 +32,8 @@ CREATE TABLE "card_condition" (
 CREATE TABLE "price" (
   "card_id" integer,
   "condition_id" integer,
-  "price_usd" decimal NOT NULL,
+  "price_usd" decimal NOT NULL,]]
+  
   "date" timestamp,
   PRIMARY KEY ("card_id", "condition_id")
 );

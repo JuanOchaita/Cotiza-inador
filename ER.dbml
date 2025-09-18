@@ -28,7 +28,7 @@ Table price {
   card_id integer [primary key]
   condition_id integer [primary key]
   price_usd decimal
-  date timestamp
+  created_at timestamp
 }
 
 Table collection {

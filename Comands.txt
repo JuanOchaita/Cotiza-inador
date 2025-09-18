@@ -5,3 +5,18 @@ docker ps
 docker cp schema.sql postgres_db:/schema.sql
 docker cp "PATH/schema.sql" postgres_db:/schema.sql
 docker exec -i postgres_db psql -U myuser -d mydb < schema.sql
+
+# Entrar a posgresql Terminal
+docker exec -it postgres_db psql -U myuser -d mydb
+
+# Salir de posgresql Terminal
+\q
+
+# Ver toda la info de las tables:
+
+SELECT * FROM "card";
+SELECT * FROM "card_condition";
+SELECT * FROM "card_in_collection";
+SELECT * FROM "collection";
+SELECT * FROM "price";
+SELECT * FROM "user";
