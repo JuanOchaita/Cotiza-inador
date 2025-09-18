@@ -1,37 +1,30 @@
 import asyncio
 import pandas as pd
 from playwright.async_api import async_playwright
+import urllib.parse
 
 async def search_card(page, card_name, set_name):
-    query = f"{card_name} {set_name}"
-    await page.goto("https://www.tcgplayer.com", wait_until="domcontentloaded")
+    # Encode the search query to be URL-safe
+    query = urllib.parse.quote_plus(f"{card_name} {set_name}")
+    
+    # Construct the URL directly
+    url = f"https://www.tcgplayer.com/search/all/product?q={query}&view=grid&ProductTypeName=Cards&page=1"
+    
+    # Go to the URL
+    await page.goto(url, wait_until="domcontentloaded")
+    
+    # Wait for the product cards to appear
+    try:
+        await page.wait_for_selector("section.product-card__product", timeout=5000)
+    except:
+        print(f"No results found for {card_name} ({set_name})")
+        return False
 
-    # Wait for the search input
-    await page.wait_for_selector("input#autocomplete-input")
-
-    # Type query
-    await page.fill("input#autocomplete-input", query)
-    await page.keyboard.press("Enter")
-
-    # --- Abrir Product Type ---
-    await page.wait_for_selector("button[data-testid='filterBar-Product Type']")
-    await page.click("button[data-testid='filterBar-Product Type']")
-
-    # --- Seleccionar checkbox "Cards" ---
-    # Ajusta el selector según el id/label real del checkbox
-    await page.wait_for_selector("label[for='hfb-ProductType-Cards-filter']")
-    await page.click("label[for='hfb-ProductType-Cards-filter']")
-
-    # Wait for product cards to appear
-    await page.wait_for_selector("section.product-card__product")
-
-    # Get all cards, click the first one
-    cards = await page.query_selector_all("section.product-card__product")
-    if cards:
-        await cards[0].click()
-        await page.wait_for_timeout(3000)  # give it time to load product page
-    else:
-        print(f"No results found for {query}")
+    # Click the first product card
+    await page.click("section.product-card__product")
+    
+    # Give it a moment to load the product page
+    await page.wait_for_load_state("domcontentloaded")
 
 async def scrape_card_data(page, card_name, set_name, number_in_set, image_url):
     condition_list = ['Damaged', 'Heavily Played', 'Moderately Played', 'Lightly Played', 'Near Mint']
