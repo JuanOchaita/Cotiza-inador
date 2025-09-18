@@ -1,10 +1,10 @@
 -- Drop tables if they already exist
-DROP TABLE IF EXISTS card_in_collection;
-DROP TABLE IF EXISTS collection;
-DROP TABLE IF EXISTS price;
-DROP TABLE IF EXISTS card_condition;
-DROP TABLE IF EXISTS card;
-DROP TABLE IF EXISTS "user";
+--DROP TABLE IF EXISTS card_in_collection;
+--DROP TABLE IF EXISTS collection;
+--DROP TABLE IF EXISTS price;
+--DROP TABLE IF EXISTS card_condition;
+--DROP TABLE IF EXISTS card;
+--DROP TABLE IF EXISTS "user";
 
 -- Users table
 CREATE TABLE "user" (
