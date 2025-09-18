@@ -13,6 +13,15 @@ async def search_card(page, card_name, set_name):
     await page.fill("input#autocomplete-input", query)
     await page.keyboard.press("Enter")
 
+    # --- Abrir Product Type ---
+    await page.wait_for_selector("button[data-testid='filterBar-Product Type']")
+    await page.click("button[data-testid='filterBar-Product Type']")
+
+    # --- Seleccionar checkbox "Cards" ---
+    # Ajusta el selector según el id/label real del checkbox
+    await page.wait_for_selector("label[for='hfb-ProductType-Cards-filter']")
+    await page.click("label[for='hfb-ProductType-Cards-filter']")
+
     # Wait for product cards to appear
     await page.wait_for_selector("section.product-card__product")
 
