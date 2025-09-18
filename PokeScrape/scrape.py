@@ -13,18 +13,16 @@ async def search_card(page, card_name, set_name):
     # Go to the URL
     await page.goto(url, wait_until="domcontentloaded")
     
-    # Wait for the product cards to appear
-    try:
-        await page.wait_for_selector("section.product-card__product", timeout=5000)
-    except:
-        print(f"No results found for {card_name} ({set_name})")
-        return False
+    # Wait for product cards to appear
+    await page.wait_for_selector("section.product-card__product")
 
-    # Click the first product card
-    await page.click("section.product-card__product")
-    
-    # Give it a moment to load the product page
-    await page.wait_for_load_state("domcontentloaded")
+    # Get all cards, click the first one
+    cards = await page.query_selector_all("section.product-card__product")
+    if cards:
+        await cards[0].click()
+        await page.wait_for_timeout(3000)  # give it time to load product page
+    else:
+        print(f"No results found for {query}")
 
 async def scrape_card_data(page, card_name, set_name, number_in_set, image_url):
     condition_list = ['Damaged', 'Heavily Played', 'Moderately Played', 'Lightly Played', 'Near Mint']
