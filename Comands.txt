@@ -1,0 +1,7 @@
+# Docker:
+
+docker compose up -d
+docker ps
+docker cp schema.sql postgres_db:/schema.sql
+docker cp "PATH/schema.sql" postgres_db:/schema.sql
+docker exec -i postgres_db psql -U myuser -d mydb < schema.sql
