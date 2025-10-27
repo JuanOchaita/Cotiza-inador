@@ -1,5 +1,5 @@
 # Docker:
-
+docker compose down
 docker compose up -d
 docker ps
 docker cp schema.sql postgres_db:/schema.sql

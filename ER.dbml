@@ -1,4 +1,27 @@
 // ==========================
+// Catalog Tables (Normalized)
+// ==========================
+
+Table language {
+  language_id integer [primary key]
+  code varchar [note: 'EN, JP, ES, etc.']
+  name varchar [note: 'English, Japanese, Spanish, etc.']
+}
+
+Table card_set {
+  set_id integer [primary key]
+  set_name varchar [note: 'e.g: Legend of Blue Eyes White Dragon']
+  release_date date
+  created_at timestamp
+}
+
+Table finish_type {
+  finish_id integer [primary key]
+  finish_name varchar [note: 'Normal, Holofoil, Reverse Holofoil']
+  description varchar
+}
+
+// ==========================
 // Main Tables
 // ==========================
 
@@ -12,11 +35,12 @@ Table user {
 Table card {
   card_id integer [primary key]
   name varchar
-  language varchar [note: 'EN or JP']
-  set_name varchar [note: 'e.g: Legend of Blue Eyes White Dragon']
+  language_id integer [not null]
+  set_id integer [not null]
   set_number varchar [note: 'e.g: LOB-001']
-  finish_type varchar [note: 'Normal, Holofoil, Reverse Holofoil']
+  finish_id integer [not null]
   image_url varchar [note: 'link to official image']
+  created_at timestamp
 }
 
 Table card_condition {
@@ -56,14 +80,16 @@ Table card_in_collection {
 // User 1:N Collection
 Ref: collection.user_id > user.user_id
 
+// Card normalized relationships
+Ref: card.language_id > language.language_id
+Ref: card.set_id > card_set.set_id
+Ref: card.finish_id > finish_type.finish_id
+
 // Card 1:N Price
 Ref: price.card_id > card.card_id
 Ref: price.condition_id > card_condition.condition_id
 
-// CardCondition 1:N Price
-// Ref: price.condition_id > card_condition.condition_id
-
-// Collection N:M as mentioned
+// Collection N:M
 Ref: card_in_collection.collection_id > collection.collection_id
 Ref: card_in_collection.card_id > price.card_id
 Ref: card_in_collection.condition_id > price.condition_id
