@@ -58,17 +58,35 @@ CREATE TABLE "card" (
     "card_id" SERIAL PRIMARY KEY,
     "name" VARCHAR,
     "language_id" INTEGER NOT NULL,
-    "set_name" VARCHAR,
+    "set_name_id" INTEGER NOT NULL,
     "set_number" VARCHAR,
-    "image_url" VARCHAR,
-    "edition" VARCHAR,
-    CONSTRAINT card_unique UNIQUE (name, language_id, set_name, set_number, edition)
+    "image_id" INTEGER NOT NULL,
+    "edition_id" INTEGER,
+    CONSTRAINT card_unique UNIQUE (name, language_id, set_name_id, set_number, image_id, edition_id)
 );
 
--- Card conditions table
+-- Card language table
 CREATE TABLE language (
     language_id SERIAL PRIMARY KEY,
     description VARCHAR UNIQUE
+);
+
+-- Card edition table
+CREATE TABLE edition (
+    edition_id SERIAL PRIMARY KEY,
+    description VARCHAR UNIQUE
+);
+
+-- Card set name table
+CREATE TABLE set_name (
+    set_name_id SERIAL PRIMARY KEY,
+    description VARCHAR UNIQUE
+);
+
+-- Card set name table
+CREATE TABLE image (
+    image_url_id SERIAL PRIMARY KEY,
+    url VARCHAR UNIQUE
 );
 
 -- Comments
@@ -86,6 +104,15 @@ ALTER TABLE collection
 
 ALTER TABLE card 
     ADD FOREIGN KEY (language_id) REFERENCES "language" (language_id);
+
+ALTER TABLE card 
+    ADD FOREIGN KEY (edition_id) REFERENCES "edition" (edition_id);
+
+ALTER TABLE card 
+    ADD FOREIGN KEY (set_name_id) REFERENCES "set_name" (set_name_id);
+
+ALTER TABLE card 
+    ADD FOREIGN KEY (image_id) REFERENCES "image" (image_url_id);
 
 ALTER TABLE card_in_collection 
     ADD FOREIGN KEY (collection_id) REFERENCES collection (collection_id);
