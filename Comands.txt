@@ -7,6 +7,10 @@ docker ps
 
 docker cp "PATH/schema.sql" postgres_db:/schema.sql
 
+# Vulkan Set
+docker cp card_information_en.csv postgres_db:/tmp/cards.csv
+docker exec -i postgres_db psql -U myuser -d mydb < bulk_insert_from_csv.sql
+
 # Entrar a posgresql Terminal
 docker exec -it postgres_db psql -U myuser -d mydb
 
