@@ -1,13 +1,4 @@
 from user_orm import main_menu
-from collection_orm import get_collections_by_user
-
-if __name__ == "__main__":
-    result = main_menu()
-    if result:
-        user_id, username, email = result
-        get_collections_by_user(user_id)
-        
-from user_orm import main_menu  # debe retornar (user_id, username, email)
 from collections_cli import (
     list_collections,
     add_collection,
@@ -16,8 +7,35 @@ from collections_cli import (
 )
 import os, sys
 
-def limpiar(): os.system("cls" if os.name == "nt" else "clear")
-def pausar(): input("\nPresiona ENTER para continuar...")
+def limpiar():
+    os.system("cls" if os.name == "nt" else "clear")
+
+def pausar():
+    input("\nPresiona ENTER para continuar...")
+
+def render_tabla(rows):
+    if not rows:
+        print("\n(0) colecciones registradas.\n")
+        return
+    print("\nID │ NOMBRE │ DESCRIPCIÓN │ FECHA")
+    print("--------------------------------------")
+    for c in rows:
+        print(f"{c['id']:<3}│ {c['name']:<15}│ {(c['description'] or '-'): <20}│ {c['created_at']}")
+
+def mostrar_resumen(user_id: int):
+    rows = list_collections(user_id)  # devuelve dicts
+    if not rows:
+        print("\nNo tienes colecciones todavía.")
+        resp = input("¿Deseas crear una ahora? (s/n): ").strip().lower()
+        if resp == "s":
+            name = input("Nombre de la colección: ").strip()
+            desc = input("Descripción (opcional): ").strip() or None
+            add_collection(user_id, name, desc)
+            rows = list_collections(user_id)
+    else:
+        print(f"\nTienes {len(rows)} colección(es):")
+    render_tabla(rows)
+    pausar()
 
 def menu(user_id: int):
     while True:
@@ -34,14 +52,8 @@ def menu(user_id: int):
         op = input("Elegí una opción: ").strip()
 
         if op == "1":
-            rows = list_collections(user_id)
-            if not rows:
-                print("\n(0) colecciones registradas.\n")
-            else:
-                print("\nID │ NOMBRE │ DESCRIPCIÓN │ FECHA")
-                print("--------------------------------------")
-                for c in rows:
-                    print(f"{c.id:<3}│ {c.name:<15}│ {c.description or '-':<20}│ {c.created_at}")
+            rows = list_collections(user_id)   # dicts
+            render_tabla(rows)
             pausar()
 
         elif op == "2":
@@ -80,6 +92,9 @@ if __name__ == "__main__":
             print("\nNo se pudo iniciar sesión. Saliendo…\n")
             sys.exit(1)
         user_id, username, email = auth
+        limpiar()
+        print(f"✅ Bienvenido {username} ({email})")
+        mostrar_resumen(user_id)
         menu(user_id)
     except KeyboardInterrupt:
         print("\n\nInterrumpido por el usuario. Adiós!\n")
