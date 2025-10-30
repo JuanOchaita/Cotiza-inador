@@ -1,0 +1,8 @@
+[38;5;8m   1[0m   [37m{[0m
+[38;5;8m   2[0m   [37m    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",[0m
+[38;5;8m   3[0m   [37m    "python.analysis.extraPaths": [[0m
+[38;5;8m   4[0m   [37m        "${workspaceFolder}"[0m
+[38;5;8m   5[0m   [37m    ],[0m
+[38;5;8m   6[0m   [37m    "python.terminal.activateEnvironment": true,[0m
+[38;5;8m   7[0m   [37m    "python.formatting.provider": "black"[0m
+[38;5;8m   8[0m   [37m}[0m
