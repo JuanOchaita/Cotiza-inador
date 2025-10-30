@@ -446,7 +446,7 @@ if __name__ == "__main__":
         print("ID inválido. Terminando ejecución.")
         exit()
 
-    collection_menu(collection_id)
+    card_collection_menu(collection_id)
     print("\nPrograma finalizado.")
     
     # Primero, verificar qué condiciones están disponibles para la carta
