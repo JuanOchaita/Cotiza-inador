@@ -392,7 +392,7 @@ def decrement_card_quantity(card_collection_id: int, decrement: int = 1):
     
 # Menú interactivo
 # Menú interactivo
-def collection_menu(collection_id):
+def card_collection_menu(collection_id):
     while True:
         print(f"\n=== MENÚ DE COLECCIÓN #{collection_id} ===")
         print("1. Ver detalle de cartas")
