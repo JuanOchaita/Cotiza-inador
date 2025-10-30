@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, TIMESTAMP, DECIMAL, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, TIMESTAMP, DECIMAL, ForeignKey, func, select
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 # Configuración de la conexión a PostgreSQL
@@ -177,23 +177,64 @@ def get_cards_by_collection(collection_id: int):
 
 
 def get_cards_by_collection_with_details(collection_id: int):
-    """Obtiene todas las cartas de una colección con detalles completos"""
-    cards = session.query(CardInCollection).filter_by(collection_id=collection_id).all()
-    
-    if not cards:
-        print(f"No hay cartas en la colección {collection_id}")
-        return cards
-    
-    print(f"\n=== Cartas en la colección {collection_id} ===")
-    for card_entry in cards:
-        print(f"ID: {card_entry.card_collection_id}")
-        print(f"  Carta: {card_entry.card.name}")
-        print(f"  Condición: {card_entry.condition.description}")
-        print(f"  Cantidad: {card_entry.quantity}")
-        print("---")
-    
-    return cards
+    """
+    Obtiene todas las cartas de una colección con detalles completos,
+    mostrando solo el precio más reciente por condición.
+    """
 
+    # Subconsulta para obtener la fecha más reciente por carta y condición
+    subquery_latest = (
+        session.query(
+            Price.card_id.label("card_id"),
+            Price.condition_id.label("condition_id"),
+            func.max(Price.date).label("max_date")
+        )
+        .group_by(Price.card_id, Price.condition_id)
+        .subquery()
+    )
+
+    # Query principal con joins
+    query = (
+        session.query(
+            CardInCollection.card_collection_id,
+            Card.name.label("card_name"),
+            Card.set_number,
+            CardCondition.description.label("condition_desc"),
+            Price.price_usd,
+            CardInCollection.quantity
+        )
+        .join(Card, CardInCollection.card_id == Card.card_id)
+        .join(CardCondition, CardInCollection.condition_id == CardCondition.condition_id)
+        .join(
+            subquery_latest,
+            (subquery_latest.c.card_id == Card.card_id) &
+            (subquery_latest.c.condition_id == CardCondition.condition_id)
+        )
+        .join(
+            Price,
+            (Price.card_id == subquery_latest.c.card_id) &
+            (Price.condition_id == subquery_latest.c.condition_id) &
+            (Price.date == subquery_latest.c.max_date)
+        )
+        .filter(CardInCollection.collection_id == collection_id)
+        .order_by(Card.name)
+    )
+
+    results = query.all()
+
+    if not results:
+        print(f"\nNo hay cartas registradas en la colección {collection_id}.")
+        return []
+
+    print(f"\n=== Detalle de cartas en la colección {collection_id} ===\n")
+    print(f"{'ID':<4} {'Nombre':<25} {'#Set':<8} {'Condición':<15} {'Precio (USD)':<12} {'Cantidad':<8}")
+    print("-" * 80)
+
+    for r in results:
+        print(f"{r.card_collection_id:<4} {r.card_name:<25} {r.set_number:<8} {r.condition_desc:<15} "
+              f"${r.price_usd:<11} {r.quantity:<8}")
+
+    return results
 
 def get_card_quantity_in_collection(collection_id: int, card_id: int, condition_id: int):
     """Obtiene la cantidad de una carta específica en una colección"""
@@ -348,23 +389,78 @@ def decrement_card_quantity(card_collection_id: int, decrement: int = 1):
         session.rollback()
         print(f"Error al decrementar: {e}")
         return None
+    
+# Menú interactivo
+# Menú interactivo
+def collection_menu(collection_id):
+    while True:
+        print(f"\n=== MENÚ DE COLECCIÓN #{collection_id} ===")
+        print("1. Ver detalle de cartas")
+        print("2. Agregar carta")
+        print("3. Eliminar carta")
+        print("4. Salir")
 
+        option = input("Seleccione una opción (1-4): ").strip()
+
+        if option == "1":
+            print("\n--- Detalle de cartas en la colección ---")
+            get_cards_by_collection_with_details(collection_id)
+
+        elif option == "2":
+            print("\n--- Agregar carta a colección ---")
+            try:
+                card_id = int(input("Ingrese el ID de la carta: ").strip())
+                condition_id = int(input("Ingrese el ID de la condición: ").strip())
+                quantity = int(input("Ingrese la cantidad: ").strip())
+                add_card_to_collection(collection_id, card_id, condition_id, quantity)
+            except ValueError:
+                print("Entrada inválida, inténtelo de nuevo.")
+
+        elif option == "3":
+            print("\n--- Eliminar carta de colección ---")
+            cards = get_cards_by_collection_with_details(collection_id)
+            if cards:
+                try:
+                    card_collection_id = int(input("\nIngrese el ID del registro a eliminar: ").strip())
+                    remove_card_from_collection(card_collection_id)
+                except ValueError:
+                    print("ID inválido.")
+            else:
+                print("No hay cartas para eliminar.")
+
+        elif option == "4":
+            print("Saliendo del menú de colecciones...")
+            break
+
+        else:
+            print("Opción no válida. Intente nuevamente.")
 
 # Test de las funciones CRUD
+# Bloque principal (pantalla de prueba)
 if __name__ == "__main__":
+    Base.metadata.create_all(engine)  # Crea las tablas si no existen
+    
+    try:
+        collection_id = int(input("Ingrese el ID de la colección con la que desea trabajar: ").strip())
+    except ValueError:
+        print("ID inválido. Terminando ejecución.")
+        exit()
+
+    collection_menu(collection_id)
+    print("\nPrograma finalizado.")
     
     # Primero, verificar qué condiciones están disponibles para la carta
-    print("=== Verificando condiciones disponibles ===")
-    get_available_conditions_for_card(card_id=2)
+    # print("=== Verificando condiciones disponibles ===")
+    # get_available_conditions_for_card(card_id=2)
     
     # Añadir una carta a una colección
     # IMPORTANTE: Usa un condition_id que exista en la tabla price para tu card_id
-    add_card_to_collection(
-        collection_id=2, 
-        card_id=2, 
-        condition_id=1,
-        quantity=2
-    )
+    # add_card_to_collection(
+    #     collection_id=1, 
+    #     card_id=2, 
+    #     condition_id=1,
+    #     quantity=2
+    # )
     
     # Obtener todas las cartas en colecciones
     # get_all_cards_in_collections()
@@ -376,7 +472,7 @@ if __name__ == "__main__":
     # get_cards_by_collection_with_details(1)
     
     # Obtener cantidad específica
-    # get_card_quantity_in_collection(collection_id=1, card_id=1, condition_id=5)
+    # get_card_quantity_in_collection(collection_id=1, card_id=2, condition_id=1)
     
     # Actualizar cantidad
     # update_card_quantity(1, 5)
