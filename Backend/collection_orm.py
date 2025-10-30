@@ -70,7 +70,7 @@ def get_collections_by_user(user_id: int):
         for c in collections:
             print(f"- {c.title} (ID: {c.collection_id}, USD: {c.collection_price_usd})")
     else:
-        print("No hay colecciones para este usuario.")
+        print("\nNo hay colecciones para este usuario.")
     return collections
 
 # Menú interactivo
@@ -86,7 +86,7 @@ def collection_menu(user_id):
 
         if option == "1":
             get_collections_by_user(user_id)  # Mostrar todas las colecciones
-            title = input("Ingrese el nombre de la colección: ").strip()
+            title = input("\nIngrese el nombre de la colección: ").strip()
             collection = session.query(Collection).filter_by(user_id=user_id, title=title).first()
             if collection:
                 print(f"\nColección encontrada: {collection}")
@@ -94,25 +94,29 @@ def collection_menu(user_id):
                 print(f"Precio USD: {collection.collection_price_usd}")
                 print(f"Tipo de cambio: {collection.exchange_rate}")
                 return collection.collection_id  # Retorna el ID de la colección
+            
+            elif not session.query(Collection).filter_by(user_id=user_id).all():
+                print("\nNo tienes colecciones")
+                
             else:
-                print("Colección no encontrada.")
+                print("\nColección no encontrada.")
 
         elif option == "2":
-            title = input("Ingrese el título de la nueva colección: ").strip()
+            title = input("\nIngrese el título de la nueva colección: ").strip()
             create_collection(title, user_id)
 
         elif option == "3":
             get_collections_by_user(user_id)  # Mostrar todas las colecciones
-            title = input("Ingrese el nombre de la colección a eliminar: ").strip()
+            title = input("\nIngrese el nombre de la colección a eliminar: ").strip()
             collection = session.query(Collection).filter_by(user_id=user_id, title=title).first()
             if collection:
                 confirm = input(f"¿Confirma eliminar la colección '{title}'? (s/n): ").strip().lower()
                 if confirm == "s":
                     delete_collection(collection.collection_id)
                 else:
-                    print("Eliminación cancelada.")
+                    print("\nEliminación cancelada.")
             else:
-                print("Colección no encontrada.")
+                print("\nColección no encontrada.")
 
         elif option == "4":
             print("Saliendo del menú...")
