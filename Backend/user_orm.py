@@ -4,18 +4,17 @@ from sqlalchemy import create_engine, Column, Integer, String, TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-
 # Configuración de la conexión a PostgreSQL
 DATABASE_URL = "postgresql+psycopg2://myuser:mypassword@localhost:5433/mydb"
-engine = create_engine(DATABASE_URL, echo=True)
+engine = create_engine(DATABASE_URL, echo=False)
 Session = sessionmaker(bind=engine)
 session = Session()
 Base = declarative_base()
 
 # Definición del modelo ORM para la tabla "user"
 class User(Base):
-    __tablename__ = 'user'
 
+    __tablename__ = 'user'
     user_id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String)
     email = Column(String, unique=True)
@@ -71,14 +70,11 @@ def delete_user(user_id: int):
 # Test de las funciones CRUD
 if __name__ == "__main__":
 
-    #create_user("Alice", "alice@example.com")
+    create_user("admin", "admin@example.com")
     #print(get_all_users())
-
     # Buscar usuario por email
     #print(get_user_by_email("alice@example.com"))
-
     # Actualizar email
     #print(update_user_email(1, "alice_new@example.com"))
-
     # Eliminar usuario
-    delete_user(1)
+   #delete_user(7)
