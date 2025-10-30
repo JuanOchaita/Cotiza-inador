@@ -1,89 +1,112 @@
-# collections_cli.py — CRUD de colecciones Pokémon en terminal
 from __future__ import annotations
-import os
 from typing import Optional, List
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine, Column, Integer, String, func, select
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import Column, Integer, String, func, select, UniqueConstraint, Index
 from sqlalchemy.exc import IntegrityError
 
-# -----------------
-# Config DB
-# -----------------
-# Usa SQLite por defecto para que funcione sin configurar nada
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///collections.db")
+# 👇 Importa la MISMA conexión y Base que usa usuarios
+# user_orm debe definir: DATABASE_URL, engine, Base, Session (sessionmaker)
+from user_orm import engine, Base, Session  # <-- REUTILIZAMOS, no creamos otro engine/Base
 
-engine = create_engine(DATABASE_URL, echo=False)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-Base = declarative_base()
 
 # -----------------
-# Modelo ORM
+# Modelo ORM (mismo Base = misma BD)
 # -----------------
 class Collection(Base):
     __tablename__ = "collections"
+    __table_args__ = (
+        UniqueConstraint("user_id", "name", name="uq_user_collection_name"),
+        Index("ix_collections_user_id", "user_id"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(120), unique=True, nullable=False)
+    user_id = Column(Integer, nullable=False, index=True)
+    name = Column(String(120), nullable=False)
     description = Column(String(255), nullable=True)
-    created_at = Column(String, server_default=func.now())
+    created_at = Column(String, server_default=func.now(), nullable=False)
 
     def __repr__(self):
-        return f"<Collection id={self.id}, name='{self.name}'>"
+        return f"<Collection id={self.id} user_id={self.user_id} name='{self.name}'>"
 
-# Crear la tabla si no existe
+
+# Crea la tabla si no existe, en la MISMA BD
 Base.metadata.create_all(bind=engine)
 
+
 # -----------------
-# Sesión segura
+# Sesión segura (usa el Session de user_orm)
 # -----------------
 @contextmanager
 def get_session():
-    s = SessionLocal()
+    s = Session()  # mismo factory que usa usuarios
     try:
         yield s
         s.commit()
-    except Exception as e:
+    except Exception:
         s.rollback()
-        print(f"⚠️ Error: {e}")
+        raise
     finally:
         s.close()
 
+
 # -----------------
-# CRUD
+# CRUD (filtrado por user_id)
 # -----------------
-def add_collection(name: str, description: Optional[str] = None) -> None:
-    name = name.strip()
+def add_collection(user_id: int, name: str, description: Optional[str] = None) -> None:
+    name = (name or "").strip()
     if not name:
         print("⚠️ El nombre no puede estar vacío.")
         return
     with get_session() as s:
-        if s.query(Collection).filter(Collection.name == name).first():
-            print("⚠️ Ya existe una colección con ese nombre.")
+        exists = s.execute(
+            select(Collection).where(
+                Collection.user_id == user_id,
+                Collection.name == name
+            )
+        ).scalars().first()
+        if exists:
+            print("⚠️ Ya tenés una colección con ese nombre.")
             return
-        new = Collection(name=name, description=description)
-        s.add(new)
-        print(f"✅ Colección creada: {name}")
+        s.add(Collection(user_id=user_id, name=name, description=description))
+        print("✅ Colección creada.")
 
-def list_collections() -> List[Collection]:
-    with get_session() as s:
-        return s.query(Collection).order_by(Collection.id.asc()).all()
 
-def delete_collection_by_id(cid: int) -> None:
+def list_collections(user_id: int) -> List[Collection]:
     with get_session() as s:
-        obj = s.get(Collection, cid)
+        rows = s.execute(
+            select(Collection)
+            .where(Collection.user_id == user_id)
+            .order_by(Collection.id.asc())
+        ).scalars().all()
+        return rows or []  # nunca None
+
+
+def delete_collection_by_id(user_id: int, cid: int) -> None:
+    with get_session() as s:
+        obj = s.execute(
+            select(Collection).where(
+                Collection.user_id == user_id,
+                Collection.id == cid
+            )
+        ).scalars().first()
         if not obj:
-            print("⚠️ Colección no encontrada.")
+            print("⚠️ No encontrada.")
             return
         s.delete(obj)
-        print(f"✅ Colección eliminada: {obj.name}")
+        print(f"✅ Eliminada: {obj.name}")
 
-def delete_collection_by_name(name: str) -> None:
+
+def delete_collection_by_name(user_id: int, name: str) -> None:
     with get_session() as s:
-        obj = s.query(Collection).filter(Collection.name == name).first()
+        obj = s.execute(
+            select(Collection).where(
+                Collection.user_id == user_id,
+                Collection.name == (name or "").strip()
+            )
+        ).scalars().first()
         if not obj:
-            print("⚠️ Colección no encontrada.")
+            print("⚠️ No encontrada.")
             return
         s.delete(obj)
-        print(f"✅ Colección eliminada: {obj.name}")
+        print(f"✅ Eliminada: {obj.name}")
