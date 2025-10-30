@@ -176,7 +176,7 @@ if __name__ == "__main__":
     # get_collection_by_id(1)
     
     # Obtener todas las colecciones de un usuario
-    # get_collections_by_user(1)
+    get_collections_by_user(1)
     
     # Actualizar título de colección
     # update_collection_title(1, "Mi Colección Premium")

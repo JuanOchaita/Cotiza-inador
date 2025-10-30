@@ -363,7 +363,7 @@ if __name__ == "__main__":
         collection_id=2, 
         card_id=2, 
         condition_id=1,
-        quantity=1
+        quantity=2
     )
     
     # Obtener todas las cartas en colecciones

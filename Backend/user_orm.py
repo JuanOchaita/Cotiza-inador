@@ -20,8 +20,8 @@ class User(Base):
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
 
     def __repr__(self):
-        #return f"<User(id={self.user_id}, name='{self.name}', email='{self.email}')>"
-        return None
+        return f"<User(id={self.user_id}, name='{self.name}', email='{self.email}')>"
+
 
 # CRUD Functions
 def create_user(name: str, email: str):
@@ -29,20 +29,20 @@ def create_user(name: str, email: str):
     new_user = User(name=name, email=email)
     session.add(new_user)
     session.commit()
-    print(f"User successfully created: {new_user}")
+    print(f"User successfully created")
     return new_user
 
 
 def login_user():
-    """Asks for credentials and returns (username, email) if correct, or None if failed."""
+    """Asks for credentials and returns (user_id, username, email) if correct, or None if failed."""
     username = input("Enter your username: ").strip()
     email = input("Enter your email: ").strip()
 
     user = session.query(User).filter_by(name=username, email=email).first()
 
     if user:
-        #print(f"Welcome, {user.name}!")
-        return user.name, user.email
+        print(f"Welcome, {user.name} (Email: {user.email})")
+        return user.user_id, user.name, user.email
     else:
         print("The username or email is incorrect. Returning to the main menu...")
         return None
@@ -51,7 +51,7 @@ def login_user():
 def main_menu():
     """
     Displays the main menu and manages user actions.
-    If the user logs in successfully, returns (username, email).
+    If the user logs in successfully, returns (user_id, username, email).
     If the user exits or fails to log in, returns None.
     """
     Base.metadata.create_all(engine)
@@ -66,9 +66,9 @@ def main_menu():
         if option == "1":
             result = login_user()
             if result:
-                username, email = result
-                #print(f"Successfully logged in as: {username} ({email})")
-                return username, email  # ← returns upon successful login
+                user_id, username, email = result
+                print(f"Successfully logged in as: {username} ({email}), ID: {user_id}")
+                return user_id, username, email  # ← now returns user_id as well
 
         elif option == "2":
             username = input("Enter a username: ").strip()
@@ -96,7 +96,7 @@ def main_menu():
 if __name__ == "__main__":
     result = main_menu()
     if result:
-        username, email = result
-        print(f"\nAuthenticated user: {username} ({email})")
+        user_id, username, email = result
+        print(f"\nAuthenticated user: ID={user_id}, Name={username}, Email={email}")
     else:
         print("\nProgram ended without login.")
