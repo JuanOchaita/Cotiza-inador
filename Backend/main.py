@@ -17,20 +17,27 @@ def render_tabla(rows):
     if not rows:
         print("\n(0) colecciones registradas.\n")
         return
-    print("\nID │ NOMBRE │ DESCRIPCIÓN │ FECHA")
-    print("--------------------------------------")
+    print("\nID │ NOMBRE           │ DESCRIPCIÓN          │ FECHA")
+    print("-----------------------------------------------------------")
     for c in rows:
-        print(f"{c['id']:<3}│ {c['name']:<15}│ {(c['description'] or '-'): <20}│ {c['created_at']}")
+        cid = c.get("id", "")
+        name = c.get("name", "") or "-"
+        desc = c.get("description", "") or "-"
+        fecha = c.get("created_at", "") or "-"
+        print(f"{str(cid):<3}│ {name:<16}│ {desc:<21}│ {fecha}")
 
 def mostrar_resumen(user_id: int):
     rows = list_collections(user_id)  # devuelve dicts
     if not rows:
         print("\nNo tienes colecciones todavía.")
         resp = input("¿Deseas crear una ahora? (s/n): ").strip().lower()
-        if resp == "s":
+        if resp in ("s", "si", "sí"):
             name = input("Nombre de la colección: ").strip()
             desc = input("Descripción (opcional): ").strip() or None
-            add_collection(user_id, name, desc)
+            try:
+                add_collection(user_id, name, desc)
+            except Exception as e:
+                print(f"⚠️ Error: {e}")
             rows = list_collections(user_id)
     else:
         print(f"\nTienes {len(rows)} colección(es):")
@@ -59,7 +66,14 @@ def menu(user_id: int):
         elif op == "2":
             name = input("Nombre: ").strip()
             desc = input("Descripción (opcional): ").strip() or None
-            add_collection(user_id, name, desc)
+            if not name:
+                print("⚠️ El nombre no puede estar vacío.")
+                pausar()
+                continue
+            try:
+                add_collection(user_id, name, desc)
+            except Exception as e:
+                print(f"⚠️ Error: {e}")
             pausar()
 
         elif op == "3":
@@ -67,15 +81,29 @@ def menu(user_id: int):
             if modo == "1":
                 try:
                     cid = int(input("ID: ").strip())
-                    delete_collection_by_id(user_id, cid)
                 except ValueError:
                     print("⚠️ ID inválido.")
+                    pausar()
+                    continue
+                try:
+                    delete_collection_by_id(user_id, cid)
+                except Exception as e:
+                    print(f"⚠️ Error: {e}")
+                pausar()
             elif modo == "2":
                 name = input("Nombre exacto: ").strip()
-                delete_collection_by_name(user_id, name)
+                if not name:
+                    print("⚠️ Nombre inválido.")
+                    pausar()
+                    continue
+                try:
+                    delete_collection_by_name(user_id, name)
+                except Exception as e:
+                    print(f"⚠️ Error: {e}")
+                pausar()
             else:
                 print("⚠️ Opción inválida.")
-            pausar()
+                pausar()
 
         elif op == "4":
             print("\nAdiós 👋\n")
