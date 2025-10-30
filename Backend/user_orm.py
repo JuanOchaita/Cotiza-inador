@@ -41,7 +41,7 @@ def login_user():
     user = session.query(User).filter_by(name=username, email=email).first()
 
     if user:
-        print(f"Welcome, {user.name} (Email: {user.email})")
+        #print(f"Welcome, {user.name} (Email: {user.email})")
         return user.user_id, user.name, user.email
     else:
         print("The username or email is incorrect. Returning to the main menu...")
@@ -67,7 +67,7 @@ def main_menu():
             result = login_user()
             if result:
                 user_id, username, email = result
-                print(f"Successfully logged in as: {username} ({email}), ID: {user_id}")
+                #print(f"Successfully logged in as: {username} ({email}), ID: {user_id}")
                 return user_id, username, email  # ← now returns user_id as well
 
         elif option == "2":
