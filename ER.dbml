@@ -1,0 +1,70 @@
+// ==========================
+// Main Tables
+// ==========================
+
+Table user {
+  user_id integer [primary key]
+  name varchar
+  email varchar [unique]
+  created_at timestamp
+}
+
+Table card {
+  card_id integer [primary key]
+  name varchar
+  language varchar [note: 'EN or JP']
+  set_name varchar [note: 'e.g: Legend of Blue Eyes White Dragon']
+  set_number varchar [note: 'e.g: LOB-001']
+  finish_type varchar [note: 'Normal, Holofoil, Reverse Holofoil']
+  image_url varchar [note: 'link to official image']
+}
+
+Table card_condition {
+  condition_id integer [primary key]
+  description varchar [note: 'Example: Near Mint, Lightly Played']
+}
+
+Table price {
+  card_id integer [primary key]
+  condition_id integer [primary key]
+  price_usd decimal
+  created_at timestamp
+}
+
+Table collection {
+  collection_id integer [primary key]
+  title varchar
+  user_id integer [not null]
+  exchange_rate decimal [note: 'Negotiable per collection']
+  collection_price_usd decimal [note: 'CALCULATED VALUE FROM SUM OF INDIVIDUAL CARDS']
+  created_at timestamp
+}
+
+Table card_in_collection {
+  card_collection_id integer [primary key]
+  collection_id integer [not null]
+  card_id integer [not null]
+  condition_id integer [not null]
+  quantity integer
+  price integer [not null]
+}
+
+// ==========================
+// Relationships
+// ==========================
+
+// User 1:N Collection
+Ref: collection.user_id > user.user_id
+
+// Card 1:N Price
+Ref: price.card_id > card.card_id
+Ref: price.condition_id > card_condition.condition_id
+
+// CardCondition 1:N Price
+// Ref: price.condition_id > card_condition.condition_id
+
+// Collection N:M as mentioned
+Ref: card_in_collection.collection_id > collection.collection_id
+Ref: card_in_collection.card_id > price.card_id
+Ref: card_in_collection.condition_id > price.condition_id
+Ref: card_in_collection.price > price.price_usd

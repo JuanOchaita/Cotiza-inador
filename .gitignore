@@ -1,0 +1,16 @@
+# Ignorar el entorno virtual de Python
+/venv/
+
+# Ignorar archivos generados por el sistema operativo
+.DS_Store
+
+# Ignorar archivos temporales o de configuración del editor
+.vscode/
+
+# Ignorar la carpeta de librerías de Python
+# (Las dependencias se gestionan con requirements.txt)
+/Lib/
+
+# Ignorar la carpeta de scripts
+# (Normalmente, se gestiona con versiones, pero a veces se ignora si son scripts de despliegue)
+/Scripts/

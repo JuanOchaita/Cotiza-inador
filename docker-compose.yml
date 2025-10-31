@@ -1,0 +1,24 @@
+services:
+ postgres:
+  image: postgres:15
+  container_name: postgres_db
+  restart: always
+  environment:
+   POSTGRES_USER: myuser
+   POSTGRES_PASSWORD: mypassword
+   POSTGRES_DB: mydb
+  ports:
+   - "5433:5432"
+  volumes:
+   - pgdata:/var/lib/postgresql/data
+  deploy:
+   resources:
+    limits:
+     cpus: '0.5'    # Limita al 50% de 1 CPU
+     memory: 2G     # Máximo 2GB de RAM
+    reservations:
+     cpus: '0.25'   # Reservado 25% de 1 CPU
+     memory: 512M   # Reservado 512MB
+
+volumes:
+ pgdata:
