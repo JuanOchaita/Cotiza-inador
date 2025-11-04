@@ -6,7 +6,7 @@ import collection_orm as collection_mod
 import card_in_collection_orm as card_mod
 
 app = FastAPI(title="Colecciones de Cartas API")
-
+'''
 # ------------------ USUARIOS ------------------
 
 @app.post("/users/")
@@ -40,9 +40,16 @@ def delete_user(user_id: int):
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return {"message": "Usuario eliminado"}
-
+'''
 # ------------------ COLECCIONES ------------------
 
+from fastapi import FastAPI, HTTPException
+from typing import List
+import collection_orm as collection_mod
+
+app = FastAPI(title="Colecciones de Cartas API")
+
+# Crear una colección
 @app.post("/collections/")
 def create_collection(title: str, user_id: int, exchange_rate: float = None, collection_price_usd: float = None):
     try:
@@ -50,10 +57,15 @@ def create_collection(title: str, user_id: int, exchange_rate: float = None, col
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+# Obtener todas las colecciones
 @app.get("/collections/", response_model=List[dict])
 def get_collections():
-    return collection_mod.get_all_collections()
+    try:
+        return collection_mod.get_all_collections()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
+# Obtener colección por ID
 @app.get("/collections/{collection_id}")
 def get_collection(collection_id: int):
     collection = collection_mod.get_collection_by_id(collection_id)
@@ -61,13 +73,55 @@ def get_collection(collection_id: int):
         raise HTTPException(status_code=404, detail="Colección no encontrada")
     return collection
 
-@app.put("/collections/{collection_id}")
+# Obtener todas las colecciones de un usuario
+@app.get("/collections/user/{user_id}")
+def get_collections_by_user(user_id: int):
+    try:
+        return collection_mod.get_collections_by_user(user_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Actualizar título de colección
+@app.put("/collections/{collection_id}/title")
+def update_collection_title(collection_id: int, new_title: str):
+    collection = collection_mod.update_collection_title(collection_id, new_title)
+    if not collection:
+        raise HTTPException(status_code=404, detail="Colección no encontrada")
+    return collection
+
+# Actualizar precio de colección
+@app.put("/collections/{collection_id}/price")
+def update_collection_price(collection_id: int, new_price_usd: float):
+    collection = collection_mod.update_collection_price(collection_id, new_price_usd)
+    if not collection:
+        raise HTTPException(status_code=404, detail="Colección no encontrada")
+    return collection
+
+# Actualizar tipo de cambio de colección
+@app.put("/collections/{collection_id}/exchange_rate")
+def update_collection_exchange_rate(collection_id: int, new_exchange_rate: float):
+    collection = collection_mod.update_collection_exchange_rate(collection_id, new_exchange_rate)
+    if not collection:
+        raise HTTPException(status_code=404, detail="Colección no encontrada")
+    return collection
+
+# Actualizar múltiples campos de colección
+@app.put("/collections/{collection_id}/update")
 def update_collection(collection_id: int, title: str = None, exchange_rate: float = None, collection_price_usd: float = None):
     collection = collection_mod.update_collection(collection_id, title, exchange_rate, collection_price_usd)
     if not collection:
         raise HTTPException(status_code=404, detail="Colección no encontrada")
     return collection
 
+# Obtener colección con información del usuario
+@app.get("/collections/{collection_id}/with_user")
+def get_collection_with_user(collection_id: int):
+    collection = collection_mod.get_collection_with_user(collection_id)
+    if not collection:
+        raise HTTPException(status_code=404, detail="Colección no encontrada")
+    return collection
+
+# Eliminar colección
 @app.delete("/collections/{collection_id}")
 def delete_collection(collection_id: int):
     collection = collection_mod.delete_collection(collection_id)
@@ -75,6 +129,7 @@ def delete_collection(collection_id: int):
         raise HTTPException(status_code=404, detail="Colección no encontrada")
     return {"message": "Colección eliminada"}
 
+'''
 # ------------------ CARTAS EN COLECCIONES ------------------
 
 @app.post("/cards_in_collection/")
@@ -108,4 +163,4 @@ def remove_card(card_collection_id: int):
     if not card:
         raise HTTPException(status_code=404, detail="Carta no encontrada")
     return {"message": "Carta eliminada"}
-
+'''
