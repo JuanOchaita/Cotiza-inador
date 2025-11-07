@@ -1,0 +1,138 @@
+/Users/krispaz/Library/Python/3.9/lib/python/site-packages/pydantic/_internal/_config.py:373: UserWarning: Valid config keys have changed in V2:
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)
+/Users/krispaz/Library/Python/3.9/lib/python/site-packages/pydantic/_internal/_config.py:373: UserWarning: Valid config keys have changed in V2:
+* 'allow_population_by_field_name' has been renamed to 'validate_by_name'
+  warnings.warn(message, UserWarning)
+INFO:     Started server process [48790]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+(trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+AttributeError: module 'bcrypt' has no attribute '__about__'
+INFO:     127.0.0.1:59683 - "POST /auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59699 - "POST /auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59699 - "OPTIONS /collections HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59699 - "GET /collections HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:59699 - "OPTIONS /collections/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59699 - "GET /collections/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59701 - "OPTIONS /collections HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59701 - "POST /collections HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:59701 - "OPTIONS /collections/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59701 - "POST /collections/ HTTP/1.1" 201 Created
+INFO:     127.0.0.1:59701 - "GET /collections HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:59701 - "GET /collections/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59701 - "OPTIONS /collections/4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59701 - "GET /collections/4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59703 - "OPTIONS /collections/4/cards HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59703 - "POST /collections/4/cards HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.ForeignKeyViolation: insert or update on table "card_in_collection" violates foreign key constraint "card_in_collection_collection_id_fkey"
+DETAIL:  Key (collection_id)=(4) is not present in table "collection".
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/uvicorn/protocols/http/httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/middleware/cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/middleware/cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/routing.py", line 78, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/routing.py", line 75, in app
+    response = await f(request)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/fastapi/routing.py", line 302, in app
+    raw_response = await run_endpoint_function(
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/fastapi/routing.py", line 215, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/starlette/concurrency.py", line 38, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/anyio/_backends/_asyncio.py", line 2470, in run_sync_in_worker_thread
+    return await future
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/anyio/_backends/_asyncio.py", line 967, in run
+    result = context.run(func, *args)
+  File "/Users/krispaz/Desktop/Cotiza-inador/Backend/app/api/collections.py", line 72, in add_card
+    return crud.add_card_to_collection(db, collection=collection, payload=payload)
+  File "/Users/krispaz/Desktop/Cotiza-inador/Backend/app/crud.py", line 305, in add_card_to_collection
+    db.flush()
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/session.py", line 4345, in flush
+    self._flush(objects)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/session.py", line 4481, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/session.py", line 4441, in _flush
+    flush_context.execute()
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/krispaz/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (psycopg2.errors.ForeignKeyViolation) insert or update on table "card_in_collection" violates foreign key constraint "card_in_collection_collection_id_fkey"
+DETAIL:  Key (collection_id)=(4) is not present in table "collection".
+
+[SQL: INSERT INTO card_in_collection (collection_id, card_id, condition_id, quantity) VALUES (%(collection_id)s, %(card_id)s, %(condition_id)s, %(quantity)s) RETURNING card_in_collection.card_collection_id]
+[parameters: {'collection_id': 4, 'card_id': 267, 'condition_id': 6, 'quantity': 1}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [48790]

@@ -1,4 +1,3 @@
-import { Card as CardType } from "@/data/sampleData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +5,18 @@ import { Button } from "@/components/ui/button";
 import { formatNumber } from "@/lib/utils";
 
 interface CardListItemProps {
-  card: CardType;
+  card: {
+    card_collection_id: number;
+    name: string;
+    set_number: string | null;
+    set_name: string | null;
+    condition: string;
+    language: string;
+    version: string | null;
+    value_usd: number;
+    quantity: number;
+    image_url: string | null;
+  };
   formatCurrency: (usd: number) => { gtq: string; usd: string };
   className?: string;
   style?: React.CSSProperties;
@@ -14,7 +24,7 @@ interface CardListItemProps {
 }
 
 const CardListItem = ({ card, formatCurrency, className = "", style, onDelete }: CardListItemProps) => {
-  const { gtq, usd } = formatCurrency(card.valueUSD);
+  const { gtq, usd } = formatCurrency(card.value_usd ?? 0);
 
   const getConditionColor = (condition: string) => {
     switch (condition) {
@@ -39,7 +49,7 @@ const CardListItem = ({ card, formatCurrency, className = "", style, onDelete }:
         <div className="flex gap-4">
           <div className="flex-shrink-0">
             <img
-              src={card.imageUrl}
+              src={card.image_url ?? "/placeholder.svg"}
               alt={card.name}
               className="w-24 h-32 object-cover rounded-lg shadow-sm"
             />
@@ -48,16 +58,19 @@ const CardListItem = ({ card, formatCurrency, className = "", style, onDelete }:
             <div className="space-y-2">
               <div>
                 <h3 className="text-lg font-bold text-foreground">{card.name}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {card.setNumber} • {card.setName}
-                </p>
+                {(card.set_number || card.set_name) && (
+                  <p className="text-sm text-muted-foreground">
+                    {card.set_number ?? "-"} • {card.set_name ?? "Unknown"}
+                  </p>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Badge className={getConditionColor(card.condition)} variant="outline">
                   {card.condition}
                 </Badge>
                 <Badge variant="outline">{card.language}</Badge>
-                <Badge variant="secondary">{card.version}</Badge>
+                {card.version && <Badge variant="secondary">{card.version}</Badge>}
+                <Badge variant="secondary">Qty: {card.quantity}</Badge>
               </div>
             </div>
             <div className="space-y-3">
@@ -70,7 +83,7 @@ const CardListItem = ({ card, formatCurrency, className = "", style, onDelete }:
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Calendar className="h-3 w-3" />
-                <span>Updated {card.lastUpdated}</span>
+                <span>Total per card: ${formatNumber(card.value_usd ?? 0)}</span>
               </div>
             </div>
           </div>

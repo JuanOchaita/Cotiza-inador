@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest, ApiError } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AddCollection = () => {
   const navigate = useNavigate();
@@ -12,12 +15,37 @@ const AddCollection = () => {
     name: "",
     description: "",
   });
+  const [error, setError] = useState<string | null>(null);
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      apiRequest("/collections", {
+        method: "POST",
+        token,
+        body: {
+          name: formData.name,
+          description: formData.description || null,
+        },
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["collections"] });
+      navigate("/dashboard");
+    },
+    onError: (err: unknown) => {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError("Error creating collection.");
+      }
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would save to backend
-    console.log("Collection created:", formData);
-    navigate("/dashboard");
+    setError(null);
+    mutation.mutate();
   };
 
   return (
@@ -68,9 +96,11 @@ const AddCollection = () => {
               />
             </div>
 
+            {error && <p className="text-sm text-destructive">{error}</p>}
+
             <div className="flex gap-3 pt-4">
-              <Button type="submit" className="flex-1">
-                Create Collection
+              <Button type="submit" className="flex-1" disabled={mutation.isPending}>
+                {mutation.isPending ? "Creating..." : "Create Collection"}
               </Button>
               <Button
                 type="button"

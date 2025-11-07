@@ -1,9 +1,15 @@
-import { Collection } from "@/data/sampleData";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Layers } from "lucide-react";
 
 interface CollectionCardProps {
-  collection: Collection;
+  collection: {
+    id: number;
+    name: string;
+    description?: string | null;
+    createdAt: string;
+    cardsCount: number;
+    totalValueUsd: number;
+  };
   exchangeRate: number;
   formatCurrency: (usd: number) => { gtq: string; usd: string };
   onClick: () => void;
@@ -19,8 +25,8 @@ const CollectionCard = ({
   className = "",
   style,
 }: CollectionCardProps) => {
-  const totalValue = collection.cards.reduce((sum, card) => sum + card.valueUSD, 0);
-  const { gtq, usd } = formatCurrency(totalValue);
+  const { gtq, usd } = formatCurrency(collection.totalValueUsd);
+  const formattedDate = new Date(collection.createdAt).toLocaleDateString();
 
   return (
     <Card
@@ -29,7 +35,7 @@ const CollectionCard = ({
       style={style}
     >
       <CardHeader>
-        <CardTitle className="text-xl">{collection.title}</CardTitle>
+        <CardTitle className="text-xl">{collection.name}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-1">
@@ -42,13 +48,13 @@ const CollectionCard = ({
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-1">
             <Layers className="h-4 w-4" />
-            <span>{collection.cards.length} cards</span>
+            <span>{collection.cardsCount} cards</span>
           </div>
         </div>
       </CardContent>
       <CardFooter className="flex items-center gap-2 text-xs text-muted-foreground">
         <Calendar className="h-3 w-3" />
-        <span>Updated {collection.lastUpdated}</span>
+        <span>Created {formattedDate}</span>
       </CardFooter>
     </Card>
   );

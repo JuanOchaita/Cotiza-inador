@@ -8,6 +8,7 @@ import CollectionDetail from "./pages/CollectionDetail";
 import AddCollection from "./pages/AddCollection";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import PrivateRoute from "@/components/PrivateRoute";
 
 const App = () => (
   <TooltipProvider>
@@ -15,10 +16,38 @@ const App = () => (
     <Sonner />
     <Routes>
       <Route path="/" element={<Login />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/collection/:id" element={<CollectionDetail />} />
-      <Route path="/add-collection" element={<AddCollection />} />
-      <Route path="/settings" element={<Settings />} />
+      <Route
+        path="/dashboard"
+        element={(
+          <PrivateRoute>
+            <Dashboard />
+          </PrivateRoute>
+        )}
+      />
+      <Route
+        path="/collection/:id"
+        element={(
+          <PrivateRoute>
+            <CollectionDetail />
+          </PrivateRoute>
+        )}
+      />
+      <Route
+        path="/add-collection"
+        element={(
+          <PrivateRoute>
+            <AddCollection />
+          </PrivateRoute>
+        )}
+      />
+      <Route
+        path="/settings"
+        element={(
+          <PrivateRoute>
+            <Settings />
+          </PrivateRoute>
+        )}
+      />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>

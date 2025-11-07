@@ -1,17 +1,46 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { sampleCollections } from "@/data/sampleData";
 import CollectionCard from "@/components/CollectionCard";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatNumber } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import type { ApiCollectionSummary } from "@/types/api";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const [collections] = useState(sampleCollections);
   const [exchangeRate] = useState(7.75);
+  const { token, user, logout } = useAuth();
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["collections"],
+    queryFn: () =>
+      apiRequest<ApiCollectionSummary[]>("/collections", {
+        token,
+      }),
+    enabled: Boolean(token),
+  });
+
+  const collections = useMemo(
+    () =>
+      data?.map((collection) => ({
+        id: collection.id,
+        name: collection.name,
+        description: collection.description,
+        createdAt: collection.created_at,
+        cardsCount: collection.cards_count,
+        totalValueUsd: collection.total_value_usd,
+      })) ?? [],
+    [data],
+  );
 
   const formatCurrency = (usd: number) => {
     const gtq = usd * exchangeRate;
@@ -29,6 +58,11 @@ const Dashboard = () => {
             {t("app.title")}
           </h1>
           <div className="flex items-center gap-3">
+            {user && (
+              <span className="hidden md:inline-flex text-sm text-muted-foreground">
+                Welcome, {user.name}
+              </span>
+            )}
             <Button className="gap-2" onClick={() => navigate("/add-collection")}>
               <Plus className="h-4 w-4" />
               {t("nav.addCollection")}
@@ -36,12 +70,26 @@ const Dashboard = () => {
             <Button variant="outline" size="icon" onClick={() => navigate("/settings")}>
               <Settings className="h-5 w-5" />
             </Button>
+            <Button variant="outline" onClick={handleLogout}>
+              Logout
+            </Button>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {collections.length === 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <p className="text-muted-foreground">Loading your collections...</p>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center space-y-2">
+              <h2 className="text-xl font-semibold">Unable to load collections</h2>
+              <p className="text-sm text-muted-foreground">Please try again in a moment.</p>
+            </div>
+          </div>
+        ) : collections.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 animate-fade-in">
             <div className="text-center space-y-4 max-w-md">
               <h2 className="text-3xl font-bold text-foreground">{t("dashboard.noCollections")}</h2>
