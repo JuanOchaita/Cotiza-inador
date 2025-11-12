@@ -14,3 +14,5 @@
 # Ignorar la carpeta de scripts
 # (Normalmente, se gestiona con versiones, pero a veces se ignora si son scripts de despliegue)
 /Scripts/
+
+/Frontend/node_modules
