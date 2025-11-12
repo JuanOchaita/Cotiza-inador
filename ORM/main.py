@@ -6,7 +6,7 @@ import collection_orm as collection_mod
 import card_in_collection_orm as card_mod
 
 app = FastAPI(title="Colecciones de Cartas API")
-'''
+
 # ------------------ USUARIOS ------------------
 
 @app.post("/users/")
@@ -40,7 +40,7 @@ def delete_user(user_id: int):
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return {"message": "Usuario eliminado"}
-'''
+
 # ------------------ COLECCIONES ------------------
 
 from fastapi import FastAPI, HTTPException
@@ -129,7 +129,7 @@ def delete_collection(collection_id: int):
         raise HTTPException(status_code=404, detail="Colección no encontrada")
     return {"message": "Colección eliminada"}
 
-'''
+
 # ------------------ CARTAS EN COLECCIONES ------------------
 
 @app.post("/cards_in_collection/")
@@ -163,4 +163,3 @@ def remove_card(card_collection_id: int):
     if not card:
         raise HTTPException(status_code=404, detail="Carta no encontrada")
     return {"message": "Carta eliminada"}
-'''
