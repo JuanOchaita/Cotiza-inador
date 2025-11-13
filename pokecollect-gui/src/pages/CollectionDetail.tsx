@@ -46,6 +46,7 @@ import {
   updateCollectionExchangeRate,
   addCardToCollection,
   removeCardEntry,
+  uploadCardsBulk,
   Collection,
   Card 
 } from "@/services/api";
@@ -66,6 +67,8 @@ const CollectionDetail = () => {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [bulkUploading, setBulkUploading] = useState(false);
 
   // Form state for single card
   const [newCard, setNewCard] = useState({
@@ -219,6 +222,32 @@ const CollectionDetail = () => {
       gtq: formatNumber(gtq),
       usd: formatNumber(usd),
     };
+  };
+
+  const handleBulkUpload = async () => {
+    if (!collection || !bulkFile) return;
+    setBulkUploading(true);
+    try {
+      const res = await uploadCardsBulk(collection.collection_id, bulkFile);
+      // Refresh cards
+      const updated = await getCardsByCollection(collection.collection_id);
+      setCards(updated);
+      toast({
+        title: "Bulk upload completed",
+        description: `Added: ${res.added}, Failed: ${res.failed}${res.failed ? ' (see console for details)' : ''}`,
+      });
+      if (res.failed) console.warn("Bulk upload errors", res.errors);
+      setBulkFile(null);
+      setIsAddDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Bulk upload failed",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkUploading(false);
+    }
   };
 
   const handleDownloadPDF = () => {
@@ -477,9 +506,14 @@ const CollectionDetail = () => {
                       <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
                         <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                         <p className="text-sm text-muted-foreground mb-2">
-                          Upload a CSV or XLS file with your card data
+                          Upload a CSV or XLSX file with your card data
                         </p>
-                        <Input type="file" accept=".csv,.xls,.xlsx" className="max-w-xs mx-auto" />
+                        <Input 
+                          type="file" 
+                          accept=".csv,.xlsx" 
+                          className="max-w-xs mx-auto" 
+                          onChange={(e) => setBulkFile(e.target.files?.[0] ?? null)}
+                        />
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Expected format: Name, Set Number, Set Name, Condition, Language, Version
@@ -489,7 +523,10 @@ const CollectionDetail = () => {
                       <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                         Cancel
                       </Button>
-                      <Button disabled>Upload Cards</Button>
+                      <Button onClick={handleBulkUpload} disabled={!bulkFile || bulkUploading}>
+                        {bulkUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Upload Cards
+                      </Button>
                     </div>
                   </TabsContent>
                 </Tabs>
@@ -555,7 +592,7 @@ const CollectionDetail = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => cardToDelete && handleDeleteCardEntry(cardToDelete)}>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => cardToDelete && handleDeleteCardEntry(cardToDelete)}>
               Remove
             </AlertDialogAction>
           </AlertDialogFooter>

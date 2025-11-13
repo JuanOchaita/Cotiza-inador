@@ -1,8 +1,15 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from typing import List, Optional
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import IntegrityError
+import csv
+import io
+
+try:
+    import openpyxl  # For .xlsx parsing
+except Exception:  # pragma: no cover
+    openpyxl = None
 
 import user_orm as user_mod
 import collection_orm as collection_mod
@@ -258,6 +265,147 @@ def add_card(payload: AddCardRequest):
         image=image_url,
         price_usd=price_val,
     )
+
+# Bulk upload endpoint
+@app.post("/cards_in_collection/bulk_upload/")
+def bulk_upload_cards(collection_id: int = Form(...), file: UploadFile = File(...)):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="File name is required")
+    filename = file.filename.lower()
+    try:
+        rows: List[List[str]] = []
+        if filename.endswith(".csv"):
+            content = file.file.read().decode("utf-8-sig", errors="ignore")
+            reader = csv.reader(io.StringIO(content))
+            rows = [r for r in reader]
+        elif filename.endswith(".xlsx"):
+            if openpyxl is None:
+                raise HTTPException(status_code=400, detail=".xlsx not supported on server (openpyxl missing)")
+            wb = openpyxl.load_workbook(file.file)
+            ws = wb.active
+            for r in ws.iter_rows(values_only=True):
+                rows.append(["" if v is None else str(v) for v in r])
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type. Use .csv or .xlsx")
+
+        # Mapping for conditions per user's provided order
+        condition_map = {
+            "near mint": 1,
+            "moderately played": 2,
+            "heavily played": 3,
+            "lightly played": 4,
+            "damaged": 5,
+            "nm": 1,
+            "mp": 2,
+            "hp": 3,
+            "lp": 4,
+            "dmg": 5,
+        }
+
+        # Common language aliases -> canonical descriptions in DB
+        language_aliases = {
+            "en": "English",
+            "eng": "English",
+            "english": "English",
+            "es": "Spanish",
+            "esp": "Spanish",
+            "español": "Spanish",
+            "spanish": "Spanish",
+            "fr": "French",
+            "french": "French",
+            "de": "German",
+            "german": "German",
+            "it": "Italian",
+            "italian": "Italian",
+            "pt": "Portuguese",
+            "portuguese": "Portuguese",
+            "jp": "Japanese",
+            "ja": "Japanese",
+            "japanese": "Japanese",
+            "kr": "Korean",
+            "ko": "Korean",
+            "korean": "Korean",
+            "cn": "Chinese",
+            "zh": "Chinese",
+            "chinese": "Chinese",
+        }
+
+        sess = card_mod.session
+
+        def resolve_language_id(lang_str: str) -> int:
+            if not lang_str:
+                raise ValueError("Language is required")
+            raw = lang_str.strip()
+            alias = language_aliases.get(raw.lower(), raw)
+            q = sess.query(card_mod.Language)
+            lang = q.filter(card_mod.Language.description.ilike(alias)).first()
+            if not lang:
+                # Auto-create language if missing
+                new_lang = card_mod.Language(description=alias)
+                sess.add(new_lang)
+                sess.commit()
+                return new_lang.language_id
+            return lang.language_id
+
+        # Heuristic: skip header row if the first row looks like headers
+        if rows:
+            first = [str(x or "").strip().lower() for x in rows[0]]
+            header_tokens = {"name", "number", "set name", "condition", "language", "version", "quantity"}
+            if any(tok in header_tokens for tok in first):
+                rows = rows[1:]
+
+        added = 0
+        errors: List[dict] = []
+        # Expected columns: Name, Number, Set Name, Condition, Language, Version, Quantity
+        for idx, r in enumerate(rows, start=1):
+            if not r or all((str(x or "").strip() == "" for x in r)):
+                continue
+            try:
+                name = (r[0] or "").strip()
+                number = (r[1] or "").strip()
+                set_name = (r[2] or "").strip()
+                condition_str = (r[3] or "").strip()
+                language_str = (r[4] or "").strip()
+                version = (r[5] or "").strip() if len(r) > 5 else ""
+                # Robust quantity parsing
+                qty_raw = str(r[6]).strip() if len(r) > 6 and r[6] is not None else ""
+                try:
+                    quantity = int(float(qty_raw)) if qty_raw != "" else 1
+                except Exception:
+                    quantity = 1
+
+                if not name or not set_name or not condition_str or not language_str:
+                    raise ValueError("Missing required fields (need Name, Set Name, Condition, Language)")
+
+                condition_id = condition_map.get(condition_str.lower())
+                if not condition_id:
+                    raise ValueError(f"Unknown condition: {condition_str}")
+
+                language_id = resolve_language_id(language_str)
+
+                entry = card_mod.add_card_to_collection_by_details(
+                    collection_id=collection_id,
+                    condition_id=condition_id,
+                    quantity=quantity,
+                    card_name=name,
+                    number_in_set=number,
+                    set_name=set_name,
+                    language_id=language_id,
+                    edition=version,
+                )
+                if not entry:
+                    raise ValueError("No price registered for this card/condition; create it in 'price' first")
+                added += 1
+            except Exception as e:  # collect error and continue
+                err = {"row": idx, "error": str(e)}
+                print(f"Bulk upload error at row {idx}: {e}")
+                errors.append(err)
+        return {"added": added, "failed": len(errors), "errors": errors}
+    finally:
+        try:
+            file.file.close()
+        except Exception:
+            pass
 
 # Obtener cartas de una colección (con detalles), para coincidir con el frontend
 @app.get("/cards_in_collection/details/{collection_id}", response_model=List[CardOut])

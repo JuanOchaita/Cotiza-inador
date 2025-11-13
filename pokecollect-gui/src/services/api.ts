@@ -32,6 +32,12 @@ export interface Card {
   price_usd?: number | null;
 }
 
+export interface BulkUploadResult {
+  added: number;
+  failed: number;
+  errors: { row: number; error: string }[];
+}
+
 export interface CreateUserRequest {
   email: string;
   password: string;
@@ -226,4 +232,19 @@ export const removeCardEntry = async (cardCollectionId: number): Promise<void> =
     const error = await response.json();
     throw new Error(error.detail || "Failed to remove card");
   }
+};
+
+export const uploadCardsBulk = async (collectionId: number, file: File): Promise<BulkUploadResult> => {
+  const form = new FormData();
+  form.append("collection_id", String(collectionId));
+  form.append("file", file);
+  const response = await fetch(`${API_BASE_URL}/cards_in_collection/bulk_upload/`, {
+    method: "POST",
+    body: form,
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || "Bulk upload failed");
+  }
+  return response.json();
 };
