@@ -58,6 +58,9 @@ const translations: Translations = {
   
   // Common
   "common.back": { EN: "Back", ES: "Volver" },
+  
+  // Navigation
+  "nav.logout": { EN: "Logout", ES: "Cerrar Sesión" },
 };
 
 interface LanguageContextType {

@@ -15,4 +15,4 @@
 # (Normalmente, se gestiona con versiones, pero a veces se ignora si son scripts de despliegue)
 /Scripts/
 
-/Frontend/node_modules
+/pokecollect-gui/node_modules

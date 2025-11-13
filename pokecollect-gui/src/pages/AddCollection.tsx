@@ -4,20 +4,44 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { createCollection } from "@/services/api";
+import { useToast } from "@/hooks/use-toast";
 
 const AddCollection = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-  });
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would save to backend
-    console.log("Collection created:", formData);
-    navigate("/dashboard");
+    
+    if (!user) {
+      navigate("/");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await createCollection({ title: name, user_id: user.user_id });
+      toast({
+        title: "Success",
+        description: "Collection created successfully",
+      });
+      navigate("/dashboard");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create collection",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -47,29 +71,15 @@ const AddCollection = () => {
               <Input
                 id="name"
                 placeholder="e.g., Base Set Collection"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 required
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea
-                id="description"
-                placeholder="Add notes about this collection..."
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                rows={4}
-              />
-            </div>
-
             <div className="flex gap-3 pt-4">
-              <Button type="submit" className="flex-1">
+              <Button type="submit" className="flex-1" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Collection
               </Button>
               <Button

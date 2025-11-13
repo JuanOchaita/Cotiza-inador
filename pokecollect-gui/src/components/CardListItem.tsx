@@ -1,4 +1,4 @@
-import { Card as CardType } from "@/data/sampleData";
+import { Card as ApiCard } from "@/services/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -6,15 +6,14 @@ import { Button } from "@/components/ui/button";
 import { formatNumber } from "@/lib/utils";
 
 interface CardListItemProps {
-  card: CardType;
-  formatCurrency: (usd: number) => { gtq: string; usd: string };
+  card: ApiCard;
+  formatCurrency?: (usd: number) => { gtq: string; usd: string };
   className?: string;
   style?: React.CSSProperties;
   onDelete?: () => void;
 }
 
 const CardListItem = ({ card, formatCurrency, className = "", style, onDelete }: CardListItemProps) => {
-  const { gtq, usd } = formatCurrency(card.valueUSD);
 
   const getConditionColor = (condition: string) => {
     switch (condition) {
@@ -39,7 +38,7 @@ const CardListItem = ({ card, formatCurrency, className = "", style, onDelete }:
         <div className="flex gap-4">
           <div className="flex-shrink-0">
             <img
-              src={card.imageUrl}
+              src={card.image || "/placeholder.svg"}
               alt={card.name}
               className="w-24 h-32 object-cover rounded-lg shadow-sm"
             />
@@ -49,7 +48,7 @@ const CardListItem = ({ card, formatCurrency, className = "", style, onDelete }:
               <div>
                 <h3 className="text-lg font-bold text-foreground">{card.name}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {card.setNumber} • {card.setName}
+                  {card.set_number} • {card.set_name}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -58,19 +57,21 @@ const CardListItem = ({ card, formatCurrency, className = "", style, onDelete }:
                 </Badge>
                 <Badge variant="outline">{card.language}</Badge>
                 <Badge variant="secondary">{card.version}</Badge>
+                <Badge variant="outline">Qty: {card.quantity}</Badge>
               </div>
             </div>
             <div className="space-y-3">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Card Value</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-primary">Q{gtq}</span>
-                  <span className="text-sm text-muted-foreground italic">${usd} USD</span>
+              {formatCurrency && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Estimated Value</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-semibold text-primary">Contact for pricing</span>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Calendar className="h-3 w-3" />
-                <span>Updated {card.lastUpdated}</span>
+                <span>Added {new Date(card.date).toLocaleDateString()}</span>
               </div>
             </div>
           </div>

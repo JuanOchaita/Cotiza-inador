@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, Layers, Plus, Upload, Share2, Download, Link2, Check } from "lucide-react";
+import { ArrowLeft, Calendar, Layers, Plus, Upload, Share2, Download, Link2, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,33 +35,87 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { sampleCollections } from "@/data/sampleData";
 import CardListItem from "@/components/CardListItem";
 import { formatNumber } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useAuth } from "@/contexts/AuthContext";
+import { 
+  getCollection, 
+  getCardsByCollection, 
+  updateCollectionExchangeRate,
+  addCardToCollection,
+  removeCardFromCollection,
+  Collection,
+  Card 
+} from "@/services/api";
+import { useToast } from "@/hooks/use-toast";
 
 const CollectionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
+  const [collection, setCollection] = useState<Collection | null>(null);
+  const [cards, setCards] = useState<Card[]>([]);
   const [exchangeRate, setExchangeRate] = useState(7.75);
+  const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [cardToDelete, setCardToDelete] = useState<string | null>(null);
+  const [cardToDelete, setCardToDelete] = useState<number | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
-  
-  const collection = sampleCollections.find((c) => c.id === id);
-  const [cards, setCards] = useState(collection?.cards || []);
+  const [submitting, setSubmitting] = useState(false);
 
   // Form state for single card
   const [newCard, setNewCard] = useState({
     name: "",
     setNumber: "",
     setName: "",
-    condition: "NM" as const,
-    language: "EN" as const,
+    condition: 1, // condition_id
+    language: 1, // language_id
     version: "",
+    quantity: 1,
   });
+
+  useEffect(() => {
+    if (!user || !id) {
+      navigate("/");
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        const [collectionData, cardsData] = await Promise.all([
+          getCollection(Number(id)),
+          getCardsByCollection(Number(id))
+        ]);
+        
+        setCollection(collectionData);
+        setCards(cardsData);
+        setExchangeRate(collectionData.exchange_rate);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to fetch collection",
+          variant: "destructive",
+        });
+        navigate("/dashboard");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id, user, navigate, toast]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!collection) {
     return (
@@ -74,34 +128,93 @@ const CollectionDetail = () => {
     );
   }
 
-  const handleAddCard = () => {
-    const card = {
-      id: `c${Date.now()}`,
-      name: newCard.name,
-      setNumber: newCard.setNumber,
-      setName: newCard.setName,
-      condition: newCard.condition,
-      language: newCard.language,
-      version: newCard.version,
-      valueUSD: 0,
-      lastUpdated: new Date().toISOString().split('T')[0],
-      imageUrl: "/placeholder.svg",
-    };
-    setCards([...cards, card]);
-    setNewCard({
-      name: "",
-      setNumber: "",
-      setName: "",
-      condition: "NM",
-      language: "EN",
-      version: "",
-    });
-    setIsAddDialogOpen(false);
+  const handleAddCard = async () => {
+    if (!collection) return;
+    
+    setSubmitting(true);
+    try {
+      await addCardToCollection({
+        collection_id: collection.collection_id,
+        condition_id: newCard.condition,
+        quantity: newCard.quantity,
+        card_name: newCard.name,
+        number_in_set: newCard.setNumber,
+        set_name: newCard.setName,
+        language_id: newCard.language,
+        edition: newCard.version,
+      });
+
+      // Refresh cards
+      const updatedCards = await getCardsByCollection(collection.collection_id);
+      setCards(updatedCards);
+
+      toast({
+        title: "Success",
+        description: "Card added successfully",
+      });
+
+      setNewCard({
+        name: "",
+        setNumber: "",
+        setName: "",
+        condition: 1,
+        language: 1,
+        version: "",
+        quantity: 1,
+      });
+      setIsAddDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add card",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleDeleteCard = (cardId: string) => {
-    setCards(cards.filter(c => c.id !== cardId));
+  const handleDeleteCard = async (cardId: number) => {
+    if (!collection) return;
+    
+    try {
+      await removeCardFromCollection(cardId, collection.collection_id);
+      setCards(cards.filter(c => c.card_id !== cardId));
+      toast({
+        title: "Success",
+        description: "Card removed successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to remove card",
+        variant: "destructive",
+      });
+    }
     setCardToDelete(null);
+  };
+
+  const handleExchangeRateChange = async (newRate: string) => {
+    if (!collection) return;
+    
+    const rate = parseFloat(newRate);
+    setExchangeRate(rate);
+    
+    try {
+      await updateCollectionExchangeRate(collection.collection_id, {
+        new_exchange_rate: rate
+      });
+      toast({
+        title: "Success",
+        description: "Exchange rate updated",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update exchange rate",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatCurrency = (usd: number) => {
@@ -113,6 +226,8 @@ const CollectionDetail = () => {
   };
 
   const handleDownloadPDF = () => {
+    if (!collection) return;
+    
     const doc = new jsPDF();
     
     // Add title
@@ -121,27 +236,27 @@ const CollectionDetail = () => {
     
     // Add collection info
     doc.setFontSize(12);
+    const totalValue = collection.collection_price_usd;
+    const { gtq, usd } = formatCurrency(totalValue);
     doc.text(`Total Value: Q${gtq} (USD $${usd})`, 14, 30);
-    doc.text(`Number of Cards: ${cards.length}`, 14, 37);
-    doc.text(`Last Updated: ${collection.lastUpdated}`, 14, 44);
+    doc.text(`Number of Cards: ${totalCards}`, 14, 37);
+    doc.text(`Last Updated: ${new Date(collection.created_at).toLocaleDateString()}`, 14, 44);
     
     // Add cards table
     const tableData = cards.map(card => {
-      const { gtq, usd } = formatCurrency(card.valueUSD);
       return [
         card.name,
-        card.setNumber,
-        card.setName,
+        card.set_number,
+        card.set_name,
         card.condition,
         card.language,
         card.version,
-        `Q${gtq}`,
-        `$${usd}`,
+        card.quantity.toString(),
       ];
     });
     
     autoTable(doc, {
-      head: [['Name', 'Set #', 'Set Name', 'Condition', 'Lang', 'Version', 'GTQ', 'USD']],
+      head: [['Name', 'Set #', 'Set Name', 'Condition', 'Lang', 'Version', 'Qty']],
       body: tableData,
       startY: 50,
       styles: { fontSize: 8 },
@@ -159,7 +274,8 @@ const CollectionDetail = () => {
     setTimeout(() => setUrlCopied(false), 2000);
   };
 
-  const totalValue = cards.reduce((sum, card) => sum + card.valueUSD, 0);
+  const totalValue = collection.collection_price_usd;
+  const totalCards = cards.reduce((sum, card) => sum + card.quantity, 0);
   const { gtq, usd } = formatCurrency(totalValue);
 
   return (
@@ -179,7 +295,7 @@ const CollectionDetail = () => {
               <label className="text-sm font-medium">Exchange Rate:</label>
               <Select
                 value={exchangeRate.toString()}
-                onValueChange={(value) => setExchangeRate(parseFloat(value))}
+                onValueChange={handleExchangeRateChange}
               >
                 <SelectTrigger className="w-32">
                   <SelectValue />
@@ -299,33 +415,34 @@ const CollectionDetail = () => {
                       <div className="space-y-2">
                         <Label htmlFor="condition">Condition</Label>
                         <Select
-                          value={newCard.condition}
-                          onValueChange={(value: any) => setNewCard({ ...newCard, condition: value })}
+                          value={String(newCard.condition)}
+                          onValueChange={(value) => setNewCard({ ...newCard, condition: parseInt(value) })}
                         >
                           <SelectTrigger id="condition">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="NM">NM (Near Mint)</SelectItem>
-                            <SelectItem value="LP">LP (Lightly Played)</SelectItem>
-                            <SelectItem value="MP">MP (Moderately Played)</SelectItem>
-                            <SelectItem value="HP">HP (Heavily Played)</SelectItem>
-                            <SelectItem value="DMG">DMG (Damaged)</SelectItem>
+                            <SelectItem value="1">NM (Near Mint)</SelectItem>
+                            <SelectItem value="2">LP (Lightly Played)</SelectItem>
+                            <SelectItem value="3">MP (Moderately Played)</SelectItem>
+                            <SelectItem value="4">HP (Heavily Played)</SelectItem>
+                            <SelectItem value="5">DMG (Damaged)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="language">Language</Label>
                         <Select
-                          value={newCard.language}
-                          onValueChange={(value: any) => setNewCard({ ...newCard, language: value })}
+                          value={String(newCard.language)}
+                          onValueChange={(value) => setNewCard({ ...newCard, language: parseInt(value) })}
                         >
                           <SelectTrigger id="language">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="EN">English</SelectItem>
-                            <SelectItem value="JP">Japanese</SelectItem>
+                            <SelectItem value="1">English</SelectItem>
+                            <SelectItem value="2">Japanese</SelectItem>
+                            <SelectItem value="3">Spanish</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -338,12 +455,23 @@ const CollectionDetail = () => {
                           placeholder="e.g., 1st Edition Holo"
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="quantity">Quantity</Label>
+                        <Input
+                          id="quantity"
+                          type="number"
+                          min="1"
+                          value={newCard.quantity}
+                          onChange={(e) => setNewCard({ ...newCard, quantity: parseInt(e.target.value) || 1 })}
+                        />
+                      </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-4">
                       <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                         Cancel
                       </Button>
-                      <Button onClick={handleAddCard} disabled={!newCard.name || !newCard.setName}>
+                      <Button onClick={handleAddCard} disabled={!newCard.name || !newCard.setName || submitting}>
+                        {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Add Card
                       </Button>
                     </div>
@@ -386,14 +514,14 @@ const CollectionDetail = () => {
                 <Layers className="h-4 w-4" />
                 Number of Cards
               </p>
-              <p className="text-3xl font-bold">{cards.length}</p>
+              <p className="text-3xl font-bold">{totalCards}</p>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
                 Last Updated
               </p>
-              <p className="text-xl font-semibold">{collection.lastUpdated}</p>
+              <p className="text-xl font-semibold">{new Date(collection.created_at).toLocaleDateString()}</p>
             </div>
           </div>
         </div>
@@ -403,12 +531,12 @@ const CollectionDetail = () => {
           <div className="space-y-3">
             {cards.map((card, index) => (
               <CardListItem
-                key={card.id}
+                key={card.card_id}
                 card={card}
                 formatCurrency={formatCurrency}
                 style={{ animationDelay: `${index * 0.05}s` }}
                 className="animate-slide-up"
-                onDelete={() => setCardToDelete(card.id)}
+                onDelete={() => setCardToDelete(card.card_id)}
               />
             ))}
           </div>
