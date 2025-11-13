@@ -7,6 +7,19 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, User, Bell, DollarSign, Shield, Globe } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { deleteUser } from "@/services/api";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -18,13 +31,16 @@ import {
 const Settings = () => {
   const navigate = useNavigate();
   const { language, setLanguage, t } = useLanguage();
+  const { user, logout } = useAuth();
+  const { toast } = useToast();
   const [settings, setSettings] = useState({
-    email: "user@example.com",
+    email: user?.email ?? "user@example.com",
     defaultExchangeRate: "7.75",
     notifications: true,
     priceAlerts: false,
     autoUpdate: true,
   });
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const handleSave = () => {
     console.log("Settings saved:", settings);
@@ -188,7 +204,7 @@ const Settings = () => {
             <Button variant="outline" className="w-full">
               {t("settings.exportData")}
             </Button>
-            <Button variant="destructive" className="w-full">
+            <Button variant="destructive" className="w-full" onClick={() => setConfirmDeleteOpen(true)}>
               {t("settings.deleteAccount")}
             </Button>
           </div>
@@ -208,6 +224,40 @@ const Settings = () => {
           </div>
         </div>
       </main>
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. Are you sure you want to delete your account?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!user) return;
+                try {
+                  await deleteUser(user.user_id);
+                  toast({ title: "Account deleted", description: "Your account has been removed." });
+                  logout();
+                  navigate("/");
+                } catch (error) {
+                  toast({
+                    title: "Error",
+                    description: error instanceof Error ? error.message : "Failed to delete account",
+                    variant: "destructive",
+                  });
+                } finally {
+                  setConfirmDeleteOpen(false);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

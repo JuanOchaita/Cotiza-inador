@@ -50,6 +50,27 @@ class Card(Base):
     def __repr__(self):
         return f"<Card(id={self.card_id}, name='{self.name}')>"
 
+# Auxiliary lookup tables as per schema
+class Language(Base):
+    __tablename__ = 'language'
+    language_id = Column(Integer, primary_key=True, autoincrement=True)
+    description = Column(String, unique=True)
+
+class Edition(Base):
+    __tablename__ = 'edition'
+    edition_id = Column(Integer, primary_key=True, autoincrement=True)
+    description = Column(String, unique=True)
+
+class SetName(Base):
+    __tablename__ = 'set_name'
+    set_name_id = Column(Integer, primary_key=True, autoincrement=True)
+    description = Column(String, unique=True)
+
+class Image(Base):
+    __tablename__ = 'image'
+    image_url_id = Column(Integer, primary_key=True, autoincrement=True)
+    url = Column(String, unique=True)
+
 
 class CardCondition(Base):
     __tablename__ = 'card_condition'
@@ -149,6 +170,120 @@ def add_card_to_collection(collection_id: int, card_id: int,
     except Exception as e:
         session.rollback()
         print(f"Error al añadir carta: {e}")
+        return None
+
+# Helper upsert/find functions for adding by details
+
+def get_or_create_set_name(description: str) -> int:
+    sn = session.query(SetName).filter_by(description=description).first()
+    if sn:
+        return sn.set_name_id
+    sn = SetName(description=description)
+    session.add(sn)
+    session.commit()
+    return sn.set_name_id
+
+def get_or_create_edition(description: str) -> int:
+    ed = session.query(Edition).filter_by(description=description).first()
+    if ed:
+        return ed.edition_id
+    ed = Edition(description=description)
+    session.add(ed)
+    session.commit()
+    return ed.edition_id
+
+def get_or_create_image_placeholder(name: str, set_name: str, set_number: str) -> int:
+    # Deterministic placeholder URL to avoid duplicates
+    placeholder = f"placeholder://{name}|{set_name}|{set_number}"
+    img = session.query(Image).filter_by(url=placeholder).first()
+    if img:
+        return img.image_url_id
+    img = Image(url=placeholder)
+    session.add(img)
+    session.commit()
+    return img.image_url_id
+
+def resolve_or_create_card_for_condition(name: str, language_id: int, set_name_desc: str, set_number: str, edition_desc: str, condition_id: int) -> int:
+    name = name.strip()
+    set_number = (set_number or '').strip()
+    set_name_id = get_or_create_set_name(set_name_desc)
+    edition_id = None
+    if edition_desc and edition_desc.strip():
+        edition_id = get_or_create_edition(edition_desc.strip())
+
+    # 1) Try exact match including edition and language (ignoring image_id)
+    query = session.query(Card).filter_by(
+        name=name,
+        language_id=language_id,
+        set_name_id=set_name_id,
+        set_number=set_number,
+        edition_id=edition_id
+    )
+    candidates = query.all()
+    for c in candidates:
+        if check_price_exists(c.card_id, condition_id):
+            return c.card_id
+
+    # 2) Try without edition filter (any edition)
+    query2 = session.query(Card).filter_by(
+        name=name,
+        language_id=language_id,
+        set_name_id=set_name_id,
+        set_number=set_number,
+    )
+    candidates2 = query2.all()
+    for c in candidates2:
+        if check_price_exists(c.card_id, condition_id):
+            return c.card_id
+
+    # 3) Try relaxing language (any language), still prefer those with a price
+    query3 = session.query(Card).filter_by(
+        name=name,
+        set_name_id=set_name_id,
+        set_number=set_number,
+    )
+    candidates3 = query3.all()
+    for c in candidates3:
+        if check_price_exists(c.card_id, condition_id):
+            return c.card_id
+
+    # 4) No existing card with a price found. Create a new one with placeholder image
+    image_id = get_or_create_image_placeholder(name, set_name_desc.strip(), set_number)
+    new_card = Card(
+        name=name,
+        language_id=language_id,
+        set_name_id=set_name_id,
+        set_number=set_number,
+        image_id=image_id,
+        edition_id=edition_id
+    )
+    session.add(new_card)
+    session.commit()
+    return new_card.card_id
+
+def add_card_to_collection_by_details(collection_id: int,
+                                      condition_id: int,
+                                      quantity: int,
+                                      card_name: str,
+                                      number_in_set: str,
+                                      set_name: str,
+                                      language_id: int,
+                                      edition: str):
+    """Resolve card_id from provided details (prefer existing cards with an existing price for the condition),
+       creating one only if necessary. Then add to collection. Returns CardInCollection or None."""
+    try:
+        card_id = resolve_or_create_card_for_condition(
+            name=card_name,
+            language_id=language_id,
+            set_name_desc=set_name,
+            set_number=number_in_set,
+            edition_desc=edition or '',
+            condition_id=condition_id,
+        )
+        return add_card_to_collection(collection_id, card_id, condition_id, quantity)
+    except Exception as e:
+        session.rollback()
+        print(f"Error al añadir por detalles: {e}")
         return None
 
 

@@ -32,6 +32,10 @@ const CardListItem = ({ card, formatCurrency, className = "", style, onDelete }:
     }
   };
 
+  const priceTotalUsd = typeof card.price_usd === "number" ? card.price_usd * card.quantity : null;
+  const formatted = priceTotalUsd !== null && formatCurrency ? formatCurrency(priceTotalUsd) : null;
+  const hasDate = card.date && !isNaN(new Date(card.date).getTime());
+
   return (
     <Card className={`hover:shadow-card-hover transition-all duration-300 ${className}`} style={style}>
       <CardContent className="p-4">
@@ -65,13 +69,20 @@ const CardListItem = ({ card, formatCurrency, className = "", style, onDelete }:
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Estimated Value</p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-semibold text-primary">Contact for pricing</span>
+                    {formatted ? (
+                      <>
+                        <span className="text-2xl font-semibold text-primary">Q{formatted.gtq}</span>
+                        <span className="text-sm text-muted-foreground">(${formatted.usd} USD)</span>
+                      </>
+                    ) : (
+                      <span className="text-xl font-semibold text-primary">Contact for pricing</span>
+                    )}
                   </div>
                 </div>
               )}
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Calendar className="h-3 w-3" />
-                <span>Added {new Date(card.date).toLocaleDateString()}</span>
+                <span>{hasDate ? `Updated ${new Date(card.date).toLocaleDateString()}` : "Price date unavailable"}</span>
               </div>
             </div>
           </div>

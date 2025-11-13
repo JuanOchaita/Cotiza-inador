@@ -45,7 +45,7 @@ import {
   getCardsByCollection, 
   updateCollectionExchangeRate,
   addCardToCollection,
-  removeCardFromCollection,
+  removeCardEntry,
   Collection,
   Card 
 } from "@/services/api";
@@ -93,7 +93,7 @@ const CollectionDetail = () => {
         
         setCollection(collectionData);
         setCards(cardsData);
-        setExchangeRate(collectionData.exchange_rate);
+        setExchangeRate((collectionData.exchange_rate ?? 7.75));
       } catch (error) {
         toast({
           title: "Error",
@@ -174,16 +174,12 @@ const CollectionDetail = () => {
     }
   };
 
-  const handleDeleteCard = async (cardId: number) => {
+  const handleDeleteCardEntry = async (cardCollectionId: number) => {
     if (!collection) return;
-    
     try {
-      await removeCardFromCollection(cardId, collection.collection_id);
-      setCards(cards.filter(c => c.card_id !== cardId));
-      toast({
-        title: "Success",
-        description: "Card removed successfully",
-      });
+      await removeCardEntry(cardCollectionId);
+      setCards(cards.filter(c => c.card_collection_id !== cardCollectionId));
+      toast({ title: "Success", description: "Card removed successfully" });
     } catch (error) {
       toast({
         title: "Error",
@@ -274,7 +270,7 @@ const CollectionDetail = () => {
     setTimeout(() => setUrlCopied(false), 2000);
   };
 
-  const totalValue = collection.collection_price_usd;
+  const totalValue = Number(collection.collection_price_usd ?? 0);
   const totalCards = cards.reduce((sum, card) => sum + card.quantity, 0);
   const { gtq, usd } = formatCurrency(totalValue);
 
@@ -294,7 +290,7 @@ const CollectionDetail = () => {
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium">Exchange Rate:</label>
               <Select
-                value={exchangeRate.toString()}
+                value={String(exchangeRate ?? 7.75)}
                 onValueChange={handleExchangeRateChange}
               >
                 <SelectTrigger className="w-32">
@@ -529,21 +525,27 @@ const CollectionDetail = () => {
         <div className="space-y-4">
           <h2 className="text-2xl font-bold">Cards in Collection</h2>
           <div className="space-y-3">
-            {cards.map((card, index) => (
-              <CardListItem
-                key={card.card_id}
-                card={card}
-                formatCurrency={formatCurrency}
-                style={{ animationDelay: `${index * 0.05}s` }}
-                className="animate-slide-up"
-                onDelete={() => setCardToDelete(card.card_id)}
-              />
-            ))}
+            {cards.length === 0 ? (
+              <div className="text-sm text-muted-foreground border rounded-md p-6 text-center">
+                This collection has no cards yet. Use the "Add Card" button above to get started.
+              </div>
+            ) : (
+              cards.map((card, index) => (
+                <CardListItem
+                  key={card.card_collection_id ?? card.card_id}
+                  card={card}
+                  formatCurrency={formatCurrency}
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                  className="animate-slide-up"
+                  onDelete={() => setCardToDelete(card.card_collection_id!)}
+                />
+              ))
+            )}
           </div>
         </div>
       </main>
 
-      <AlertDialog open={!!cardToDelete} onOpenChange={() => setCardToDelete(null)}>
+      <AlertDialog open={!!cardToDelete} onOpenChange={(open) => !open && setCardToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Card</AlertDialogTitle>
@@ -553,7 +555,7 @@ const CollectionDetail = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => cardToDelete && handleDeleteCard(cardToDelete)}>
+            <AlertDialogAction onClick={() => cardToDelete && handleDeleteCardEntry(cardToDelete)}>
               Remove
             </AlertDialogAction>
           </AlertDialogFooter>

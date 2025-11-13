@@ -55,7 +55,26 @@ class AddCardRequest(BaseModel):
 
 class RemoveCardRequest(BaseModel):
     card_id: int
+    condition_id: int
     collection_id: int
+
+class CardOut(BaseModel):
+    card_id: int
+    card_collection_id: int | None = None
+    condition_id: int | None = None
+    name: str
+    condition: str
+    quantity: int
+    language: str = ""
+    version: str = ""
+    set_name: str = ""
+    set_number: str = ""
+    date: str = ""
+    image: str = ""
+    price_usd: float | None = None
+
+    class Config:
+        orm_mode = True
 
 # ------------------ USUARIOS ------------------
 
@@ -183,16 +202,115 @@ def delete_collection(collection_id: int):
 
 # ------------------ CARTAS EN COLECCIONES ------------------
 
-@app.post("/cards_in_collection/")
+@app.post("/cards_in_collection/", response_model=CardOut)
 def add_card(payload: AddCardRequest):
-    # The current ORM adds by card_id and validates price; it does not resolve card by names/set.
-    # Until ORM supports this, return a clear error to the client.
-    raise HTTPException(status_code=400, detail="Adding card by name/set is not supported yet on the backend")
+    entry = card_mod.add_card_to_collection_by_details(
+        collection_id=payload.collection_id,
+        condition_id=payload.condition_id,
+        quantity=payload.quantity,
+        card_name=payload.card_name,
+        number_in_set=payload.number_in_set,
+        set_name=payload.set_name,
+        language_id=payload.language_id,
+        edition=payload.edition,
+    )
+    if not entry:
+        raise HTTPException(status_code=400, detail="No price registered for this card and condition. Please create a price first.")
+    sess = card_mod.session
+    the_card = entry.card if getattr(entry, "card", None) else sess.query(card_mod.Card).get(entry.card_id)
+    set_name_desc = ""
+    language_desc = ""
+    version_desc = ""
+    image_url = ""
+    if the_card:
+        if getattr(the_card, "set_name_id", None) is not None:
+            sn = sess.query(card_mod.SetName).get(the_card.set_name_id)
+            set_name_desc = sn.description if sn else ""
+        if getattr(the_card, "language_id", None) is not None:
+            lng = sess.query(card_mod.Language).get(the_card.language_id)
+            language_desc = lng.description if lng else ""
+        if getattr(the_card, "edition_id", None):
+            ed = sess.query(card_mod.Edition).get(the_card.edition_id)
+            version_desc = ed.description if ed else ""
+        if getattr(the_card, "image_id", None) is not None:
+            img = sess.query(card_mod.Image).get(the_card.image_id)
+            image_url = img.url if img else ""
+    # price for (card_id, condition_id)
+    price_row = card_mod.session.query(card_mod.Price).filter_by(
+        card_id=(the_card.card_id if the_card else entry.card_id),
+        condition_id=entry.condition_id,
+    ).first()
+    price_val = float(price_row.price_usd) if price_row and price_row.price_usd is not None else None
+    price_date = price_row.date.isoformat() if price_row and price_row.date else ""
+
+    return CardOut(
+        card_id=the_card.card_id if the_card else entry.card_id,
+        card_collection_id=getattr(entry, "card_collection_id", None),
+        condition_id=getattr(entry, "condition_id", None),
+        name=the_card.name if the_card else payload.card_name,
+        condition=entry.condition.description if getattr(entry, "condition", None) else "",
+        quantity=entry.quantity or 0,
+        language=language_desc,
+        version=version_desc,
+        set_name=set_name_desc,
+        set_number=the_card.set_number if the_card else (payload.number_in_set or ""),
+        date=price_date,
+        image=image_url,
+        price_usd=price_val,
+    )
 
 # Obtener cartas de una colección (con detalles), para coincidir con el frontend
-@app.get("/cards_in_collection/details/{collection_id}")
+@app.get("/cards_in_collection/details/{collection_id}", response_model=List[CardOut])
 def get_cards_details_by_collection(collection_id: int):
-    return card_mod.get_cards_by_collection_with_details(collection_id)
+    entries = card_mod.get_cards_by_collection_with_details(collection_id)
+    sess = card_mod.session
+    result: List[CardOut] = []
+    for e in entries:
+        try:
+            the_card = e.card if getattr(e, "card", None) else sess.query(card_mod.Card).get(e.card_id)
+            set_name_desc = ""
+            language_desc = ""
+            version_desc = ""
+            image_url = ""
+            if the_card:
+                if getattr(the_card, "set_name_id", None) is not None:
+                    sn = sess.query(card_mod.SetName).get(the_card.set_name_id)
+                    set_name_desc = sn.description if sn else ""
+                if getattr(the_card, "language_id", None) is not None:
+                    lng = sess.query(card_mod.Language).get(the_card.language_id)
+                    language_desc = lng.description if lng else ""
+                if getattr(the_card, "edition_id", None):
+                    ed = sess.query(card_mod.Edition).get(the_card.edition_id)
+                    version_desc = ed.description if ed else ""
+                if getattr(the_card, "image_id", None) is not None:
+                    img = sess.query(card_mod.Image).get(the_card.image_id)
+                    image_url = img.url if img else ""
+            # price for (card_id, condition_id)
+            price_row = card_mod.session.query(card_mod.Price).filter_by(
+                card_id=(the_card.card_id if the_card else e.card_id),
+                condition_id=e.condition_id,
+            ).first()
+            price_val = float(price_row.price_usd) if price_row and price_row.price_usd is not None else None
+            price_date = price_row.date.isoformat() if price_row and price_row.date else ""
+
+            result.append(CardOut(
+                card_id=the_card.card_id if the_card else e.card_id,
+                card_collection_id=getattr(e, "card_collection_id", None),
+                condition_id=getattr(e, "condition_id", None),
+                name=the_card.name if the_card else "",
+                condition=e.condition.description if getattr(e, "condition", None) else "",
+                quantity=e.quantity or 0,
+                language=language_desc,
+                version=version_desc,
+                set_name=set_name_desc,
+                set_number=the_card.set_number if the_card else "",
+                date=price_date,
+                image=image_url,
+                price_usd=price_val,
+            ))
+        except Exception:
+            continue
+    return result
 
 @app.get("/cards_in_collection/", response_model=List[dict])
 def get_all_cards():
@@ -219,14 +337,14 @@ def remove_card(card_collection_id: int):
         raise HTTPException(status_code=404, detail="Carta no encontrada")
     return {"message": "Carta eliminada"}
 
-# Eliminar carta por payload (card_id + collection_id) para coincidir con el frontend
+# Eliminar carta por payload (card_id + condition_id + collection_id) para coincidir con el frontend
 @app.delete("/cards_in_collection/")
 def remove_card_by_payload(payload: RemoveCardRequest):
-    # Remove all entries that match the given card_id within the collection
     session = card_mod.session
     CardInCollection = card_mod.CardInCollection
     matches = session.query(CardInCollection).filter_by(
         card_id=payload.card_id,
+        condition_id=payload.condition_id,
         collection_id=payload.collection_id
     ).all()
     if not matches:

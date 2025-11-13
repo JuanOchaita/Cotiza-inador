@@ -28,7 +28,10 @@ SELECT * FROM "price";
 SELECT * FROM "price_history";
 
 SELECT * FROM "card";
+SELECT * FROM "set_name";
 SELECT * FROM "card_condition";
+SELECT * FROM "edition";
+
 
 # Fast API:
 cd ORM

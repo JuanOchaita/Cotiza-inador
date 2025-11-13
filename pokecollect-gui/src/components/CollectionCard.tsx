@@ -1,12 +1,14 @@
 import { Collection } from "@/data/sampleData";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Layers } from "lucide-react";
+import { Calendar, Layers, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface CollectionCardProps {
   collection: Collection;
   exchangeRate: number;
   formatCurrency: (usd: number) => { gtq: string; usd: string };
   onClick: () => void;
+  onDelete?: () => void;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -16,6 +18,7 @@ const CollectionCard = ({
   exchangeRate,
   formatCurrency,
   onClick,
+  onDelete,
   className = "",
   style,
 }: CollectionCardProps) => {
@@ -28,8 +31,24 @@ const CollectionCard = ({
       onClick={onClick}
       style={style}
     >
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-xl">{collection.title}</CardTitle>
+        {onDelete && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-destructive hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            aria-label="Delete collection"
+            title="Delete collection"
+          >
+            <Trash2 className="h-5 w-5" />
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-1">

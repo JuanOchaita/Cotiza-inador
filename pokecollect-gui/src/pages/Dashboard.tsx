@@ -6,9 +6,19 @@ import CollectionCard from "@/components/CollectionCard";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatNumber } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { getCollectionsByUser, Collection } from "@/services/api";
+import { getCollectionsByUser, Collection, deleteCollection } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -17,6 +27,7 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [collectionToDelete, setCollectionToDelete] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -138,6 +149,7 @@ const Dashboard = () => {
                     exchangeRate={collection.exchange_rate}
                     formatCurrency={(usd) => formatCurrency(usd, collection.exchange_rate)}
                     onClick={() => navigate(`/collection/${collection.collection_id}`)}
+                    onDelete={() => setCollectionToDelete(collection.collection_id)}
                     style={{ animationDelay: `${index * 0.1}s` }}
                     className="animate-slide-up"
                   />
@@ -147,6 +159,39 @@ const Dashboard = () => {
           </div>
         )}
       </main>
+      <AlertDialog open={collectionToDelete !== null} onOpenChange={(open) => !open && setCollectionToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Collection</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. Are you sure you want to delete this collection?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (collectionToDelete === null) return;
+                try {
+                  await deleteCollection(collectionToDelete);
+                  setCollections((prev) => prev.filter((c) => c.collection_id !== collectionToDelete));
+                  toast({ title: "Deleted", description: "Collection removed successfully" });
+                } catch (error) {
+                  toast({
+                    title: "Error",
+                    description: error instanceof Error ? error.message : "Failed to delete collection",
+                    variant: "destructive",
+                  });
+                } finally {
+                  setCollectionToDelete(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -18,6 +18,8 @@ export interface Collection {
 
 export interface Card {
   card_id: number;
+  card_collection_id?: number;
+  condition_id?: number;
   name: string;
   condition: string;
   quantity: number;
@@ -27,6 +29,7 @@ export interface Card {
   set_number: string;
   date: string;
   image: string;
+  price_usd?: number | null;
 }
 
 export interface CreateUserRequest {
@@ -140,6 +143,16 @@ export const getCollection = async (collectionId: number): Promise<Collection> =
   return response.json();
 };
 
+export const deleteCollection = async (collectionId: number): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/collections/${collectionId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to delete collection");
+  }
+};
+
 export const updateCollectionExchangeRate = async (
   collectionId: number,
   data: UpdateExchangeRateRequest
@@ -190,14 +203,25 @@ export const addCardToCollection = async (data: AddCardRequest): Promise<Card> =
 
 export const removeCardFromCollection = async (
   cardId: number,
+  conditionId: number,
   collectionId: number
 ): Promise<void> => {
   const response = await fetch(`${API_BASE_URL}/cards_in_collection/`, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ card_id: cardId, collection_id: collectionId }),
+    body: JSON.stringify({ card_id: cardId, condition_id: conditionId, collection_id: collectionId }),
   });
   
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to remove card");
+  }
+};
+
+export const removeCardEntry = async (cardCollectionId: number): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/cards_in_collection/${cardCollectionId}`, {
+    method: "DELETE",
+  });
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.detail || "Failed to remove card");
