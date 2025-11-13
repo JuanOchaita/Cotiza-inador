@@ -45,7 +45,6 @@ def get_user_by_email(email: str):
     print(f"Usuario con email {email}:", user)
     return user
 
-
 def get_user_by_email_and_password(email: str, password: str):
     """Obtiene un usuario por email y password"""
     user = session.query(User).filter_by(email=email, password=password).first()

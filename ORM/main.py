@@ -118,10 +118,24 @@ def update_email(user_id: int, new_email: str):
 
 @app.delete("/users/{user_id}")
 def delete_user(user_id: int):
-    user = user_mod.delete_user(user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return {"message": "Usuario eliminado"}
+    try:
+        # Remove all dependent data: cards within each collection, then collections
+        collections = collection_mod.get_collections_by_user(user_id) or []
+        for c in collections:
+            try:
+                card_mod.remove_all_cards_from_collection(c.collection_id)
+            except Exception:
+                pass
+            collection_mod.delete_collection(c.collection_id)
+        # Finally delete the user
+        user = user_mod.delete_user(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        return {"message": "Usuario eliminado"}
+    except IntegrityError:
+        raise HTTPException(status_code=409, detail="No se pudo eliminar el usuario por dependencias existentes")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # ------------------ COLECCIONES ------------------
 

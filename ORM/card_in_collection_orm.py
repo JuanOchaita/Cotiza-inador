@@ -146,7 +146,8 @@ def get_available_conditions_for_card(card_id: int):
 # Funciones CRUD para CardInCollection
 def add_card_to_collection(collection_id: int, card_id: int, 
                           condition_id: int, quantity: int = 1):
-    """Añade una carta a una colección (con validación de precio)"""
+    """Añade una carta a una colección (con validación de precio). Si ya existe un registro
+    con el mismo card_id y condition_id en la colección, suma las cantidades en lugar de crear uno nuevo."""
     
     # Validar que existe el precio para esta combinación
     if not check_price_exists(card_id, condition_id):
@@ -157,6 +158,19 @@ def add_card_to_collection(collection_id: int, card_id: int,
         return None
     
     try:
+        # Verificar si ya existe el registro para combinar cantidades
+        existing = session.query(CardInCollection).filter_by(
+            collection_id=collection_id,
+            card_id=card_id,
+            condition_id=condition_id
+        ).first()
+        if existing:
+            existing.quantity = (existing.quantity or 0) + (quantity or 0)
+            session.commit()
+            print(f"Cantidad combinada para la carta: {existing}")
+            return existing
+
+        # Crear un nuevo registro si no existe
         new_card_in_collection = CardInCollection(
             collection_id=collection_id,
             card_id=card_id,
