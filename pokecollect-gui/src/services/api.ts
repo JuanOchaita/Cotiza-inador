@@ -74,7 +74,7 @@ export const createUser = async (data: CreateUserRequest): Promise<User> => {
 };
 
 export const getUser = async (email: string, password: string): Promise<User> => {
-  const response = await fetch(`${API_BASE_URL}/users/${email}?password=${encodeURIComponent(password)}`, {
+  const response = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(email)}?password=${encodeURIComponent(password)}`, {
     method: "GET",
   });
   

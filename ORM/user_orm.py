@@ -16,18 +16,18 @@ class User(Base):
 
     __tablename__ = 'user'
     user_id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String)
     email = Column(String, unique=True)
+    password = Column(String, nullable=False)
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
 
     def __repr__(self):
-        return f"<User(id={self.user_id}, name='{self.name}', email='{self.email}')>"
+        return f"<User(id={self.user_id}, email='{self.email}')>"
 
 
 # Funciones CRUD
-def create_user(name: str, email: str):
+def create_user(email: str, password: str):
     """Crea un nuevo usuario"""
-    new_user = User(name=name, email=email)
+    new_user = User(email=email, password=password)
     session.add(new_user)
     session.commit()
     print(f"Usuario creado: {new_user}")
@@ -43,6 +43,13 @@ def get_user_by_email(email: str):
     """Obtiene un usuario por su email"""
     user = session.query(User).filter_by(email=email).first()
     print(f"Usuario con email {email}:", user)
+    return user
+
+
+def get_user_by_email_and_password(email: str, password: str):
+    """Obtiene un usuario por email y password"""
+    user = session.query(User).filter_by(email=email, password=password).first()
+    print(f"Usuario autenticado con email {email}:", user)
     return user
 
 def update_user_email(user_id: int, new_email: str):

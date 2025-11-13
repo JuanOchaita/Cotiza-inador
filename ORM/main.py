@@ -1,5 +1,8 @@
 from fastapi import FastAPI, HTTPException
-from typing import List
+from typing import List, Optional
+from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import IntegrityError
 
 import user_orm as user_mod
 import collection_orm as collection_mod
@@ -7,12 +10,62 @@ import card_in_collection_orm as card_mod
 
 app = FastAPI(title="Colecciones de Cartas API")
 
+# CORS configuration for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Request models expected by the frontend
+class CreateUserRequest(BaseModel):
+    email: str
+    password: str
+
+class UserOut(BaseModel):
+    user_id: int
+    email: str
+
+    class Config:
+        orm_mode = True
+
+class CreateCollectionRequest(BaseModel):
+    title: str
+    user_id: int
+
+class UpdateExchangeRateRequest(BaseModel):
+    new_exchange_rate: float
+
+class AddCardRequest(BaseModel):
+    collection_id: int
+    condition_id: int
+    quantity: int
+    card_name: str
+    number_in_set: str
+    set_name: str
+    language_id: int
+    edition: str
+
+class RemoveCardRequest(BaseModel):
+    card_id: int
+    collection_id: int
+
 # ------------------ USUARIOS ------------------
 
-@app.post("/users/")
-def create_user(name: str, email: str):
+@app.post("/users/", response_model=UserOut, status_code=201)
+def create_user(payload: CreateUserRequest):
     try:
-        return user_mod.create_user(name, email)
+        return user_mod.create_user(payload.email, payload.password)
+    except IntegrityError:
+        # Likely duplicate email constraint
+        raise HTTPException(status_code=409, detail="Email already exists")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -20,9 +73,12 @@ def create_user(name: str, email: str):
 #def get_users():
 #    return user_mod.get_all_users()
 
-@app.get("/users/{email}")
-def get_user(email: str):
-    user = user_mod.get_user_by_email(email)
+@app.get("/users/{email}", response_model=UserOut)
+def get_user(email: str, password: Optional[str] = None):
+    if password is not None:
+        user = user_mod.get_user_by_email_and_password(email, password)
+    else:
+        user = user_mod.get_user_by_email(email)
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return user
@@ -43,17 +99,12 @@ def delete_user(user_id: int):
 
 # ------------------ COLECCIONES ------------------
 
-from fastapi import FastAPI, HTTPException
-from typing import List
-import collection_orm as collection_mod
-
-app = FastAPI(title="Colecciones de Cartas API")
 
 # Crear una colección
 @app.post("/collections/")
-def create_collection(title: str, user_id: int, exchange_rate: float = None, collection_price_usd: float = None):
+def create_collection(payload: CreateCollectionRequest):
     try:
-        return collection_mod.create_collection(title, user_id, exchange_rate, collection_price_usd)
+        return collection_mod.create_collection(payload.title, payload.user_id, None, None)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -99,8 +150,8 @@ def update_collection_price(collection_id: int, new_price_usd: float):
 
 # Actualizar tipo de cambio de colección
 @app.put("/collections/{collection_id}/exchange_rate")
-def update_collection_exchange_rate(collection_id: int, new_exchange_rate: float):
-    collection = collection_mod.update_collection_exchange_rate(collection_id, new_exchange_rate)
+def update_collection_exchange_rate(collection_id: int, payload: UpdateExchangeRateRequest):
+    collection = collection_mod.update_collection_exchange_rate(collection_id, payload.new_exchange_rate)
     if not collection:
         raise HTTPException(status_code=404, detail="Colección no encontrada")
     return collection
@@ -133,11 +184,15 @@ def delete_collection(collection_id: int):
 # ------------------ CARTAS EN COLECCIONES ------------------
 
 @app.post("/cards_in_collection/")
-def add_card(collection_id: int, card_id: int, condition_id: int, quantity: int = 1):
-    card = card_mod.add_card_to_collection(collection_id, card_id, condition_id, quantity)
-    if not card:
-        raise HTTPException(status_code=400, detail="No se pudo añadir la carta")
-    return card
+def add_card(payload: AddCardRequest):
+    # The current ORM adds by card_id and validates price; it does not resolve card by names/set.
+    # Until ORM supports this, return a clear error to the client.
+    raise HTTPException(status_code=400, detail="Adding card by name/set is not supported yet on the backend")
+
+# Obtener cartas de una colección (con detalles), para coincidir con el frontend
+@app.get("/cards_in_collection/details/{collection_id}")
+def get_cards_details_by_collection(collection_id: int):
+    return card_mod.get_cards_by_collection_with_details(collection_id)
 
 @app.get("/cards_in_collection/", response_model=List[dict])
 def get_all_cards():
@@ -163,3 +218,20 @@ def remove_card(card_collection_id: int):
     if not card:
         raise HTTPException(status_code=404, detail="Carta no encontrada")
     return {"message": "Carta eliminada"}
+
+# Eliminar carta por payload (card_id + collection_id) para coincidir con el frontend
+@app.delete("/cards_in_collection/")
+def remove_card_by_payload(payload: RemoveCardRequest):
+    # Remove all entries that match the given card_id within the collection
+    session = card_mod.session
+    CardInCollection = card_mod.CardInCollection
+    matches = session.query(CardInCollection).filter_by(
+        card_id=payload.card_id,
+        collection_id=payload.collection_id
+    ).all()
+    if not matches:
+        raise HTTPException(status_code=404, detail="Carta no encontrada en la colección")
+    for entry in matches:
+        session.delete(entry)
+    session.commit()
+    return {"message": f"{len(matches)} carta(s) eliminada(s)"}
