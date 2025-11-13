@@ -215,10 +215,21 @@ def get_collection_with_user(collection_id: int):
 # Eliminar colección
 @app.delete("/collections/{collection_id}")
 def delete_collection(collection_id: int):
-    collection = collection_mod.delete_collection(collection_id)
-    if not collection:
-        raise HTTPException(status_code=404, detail="Colección no encontrada")
-    return {"message": "Colección eliminada"}
+    try:
+        # First remove all cards that reference this collection to satisfy FK constraints
+        try:
+            card_mod.remove_all_cards_from_collection(collection_id)
+        except Exception:
+            # continue even if none or partial
+            pass
+        collection = collection_mod.delete_collection(collection_id)
+        if not collection:
+            raise HTTPException(status_code=404, detail="Colección no encontrada")
+        return {"message": "Colección eliminada"}
+    except IntegrityError:
+        raise HTTPException(status_code=409, detail="No se pudo eliminar la colección por dependencias existentes")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ------------------ CARTAS EN COLECCIONES ------------------

@@ -68,28 +68,6 @@ const Settings = () => {
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="space-y-6 animate-fade-in">
-          {/* Account Settings */}
-          <div className="bg-card rounded-lg border p-6 space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <User className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-semibold">{t("settings.account")}</h2>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">{t("settings.email")}</Label>
-              <Input
-                id="email"
-                type="email"
-                value={settings.email}
-                onChange={(e) =>
-                  setSettings({ ...settings, email: e.target.value })
-                }
-              />
-            </div>
-            <Button variant="outline" className="w-full">
-              {t("settings.changePassword")}
-            </Button>
-          </div>
-
           {/* Language Settings */}
           <div className="bg-card rounded-lg border p-6 space-y-4">
             <div className="flex items-center gap-2 mb-4">
@@ -116,94 +94,12 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* Currency Settings */}
-          <div className="bg-card rounded-lg border p-6 space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <DollarSign className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-semibold">{t("settings.currency")}</h2>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="exchangeRate">{t("settings.exchangeRate")}</Label>
-              <Input
-                id="exchangeRate"
-                type="number"
-                step="0.01"
-                min="7.0"
-                max="8.0"
-                value={settings.defaultExchangeRate}
-                onChange={(e) =>
-                  setSettings({ ...settings, defaultExchangeRate: e.target.value })
-                }
-              />
-              <p className="text-sm text-muted-foreground">
-                {t("settings.exchangeRateDesc")}
-              </p>
-            </div>
-          </div>
-
-          {/* Notifications */}
-          <div className="bg-card rounded-lg border p-6 space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Bell className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-semibold">{t("settings.notifications")}</h2>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>{t("settings.emailNotifications")}</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {t("settings.emailNotificationsDesc")}
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.notifications}
-                  onCheckedChange={(checked) =>
-                    setSettings({ ...settings, notifications: checked })
-                  }
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>{t("settings.priceAlerts")}</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {t("settings.priceAlertsDesc")}
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.priceAlerts}
-                  onCheckedChange={(checked) =>
-                    setSettings({ ...settings, priceAlerts: checked })
-                  }
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>{t("settings.autoUpdate")}</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {t("settings.autoUpdateDesc")}
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.autoUpdate}
-                  onCheckedChange={(checked) =>
-                    setSettings({ ...settings, autoUpdate: checked })
-                  }
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Privacy & Security */}
+          {/* Delete Account */}
           <div className="bg-card rounded-lg border p-6 space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <Shield className="h-5 w-5 text-primary" />
               <h2 className="text-xl font-semibold">{t("settings.privacy")}</h2>
             </div>
-            <Button variant="outline" className="w-full">
-              {t("settings.exportData")}
-            </Button>
             <Button variant="destructive" className="w-full" onClick={() => setConfirmDeleteOpen(true)}>
               {t("settings.deleteAccount")}
             </Button>
