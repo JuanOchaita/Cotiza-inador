@@ -14,13 +14,7 @@ docker cp card_information_en.csv postgres_db:/tmp/cards.csv
 docker exec -i postgres_db psql -U myuser -d mydb < bulk_insert_from_csv.sql
 
 # Entrar a posgresql Terminal
-DO $$ DECLARE
-    r RECORD;
-BEGIN
-    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
-        EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(r.tablename) || ' CASCADE';
-    END LOOP;
-END $$;
+docker exec -it postgres_db psql -U myuser -d mydb
 
 # Salir de posgresql Terminal
 \q
